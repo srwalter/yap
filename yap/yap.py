@@ -117,13 +117,13 @@ class Yap(object):
         if run_command("git rev-parse HEAD"):
             files = get_output("git ls-files --cached")
         else:
-            files = get_output("git diff-index --name-only HEAD")
+            files = get_output("git diff-index --cached --name-only HEAD")
         for f in files:
             print "\t%s" % f
         if not files:
             print "\t(none)"
 
-        print "Files with unstages changes:"
+        print "Files with unstaged changes:"
         files = self._get_new_files()
         files += get_output("git ls-files -m")
         for f in files:
