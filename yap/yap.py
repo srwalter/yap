@@ -37,6 +37,11 @@ class Yap(object):
         x = get_output("git ls-files '%s'" % file)
         if x != []:
             raise YapError("File '%s' already in repository" % file)
+        os.system("git update-index '%s'" % file)
+
+    def cmd_stage(self, file):
+        if not os.access(file, os.R_OK):
+            raise YapError("No such file: %s" % file)
         os.system("git update-index --add '%s'" % file)
 
     def cmd_version(self):

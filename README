@@ -4,6 +4,8 @@
         * --staged instead of --cached
         * "switch" instead of checkout
         * show "status" after any modifying command
+        * "add" distinct from "stage"
+            * don't put file in index automatically
     * New features
         * Track "local" commits to limit history re-writing
         * Better SVN workflows
