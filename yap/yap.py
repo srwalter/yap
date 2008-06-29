@@ -6,9 +6,12 @@ def get_output(cmd):
     fd = os.popen(cmd)
     output = fd.readlines()
     rc = fd.close()
-    if len(output) == 1:
-        return output[0]
-    return output
+    return [x.strip() for x in output]
+
+def run_command(cmd):
+    rc = os.system("%s > /dev/null 2>&1" % cmd)
+    rc >>= 8
+    return rc
 
 class YapError(Exception):
     def __init__(self, msg):
@@ -37,12 +40,37 @@ class Yap(object):
         x = get_output("git ls-files '%s'" % file)
         if x != []:
             raise YapError("File '%s' already in repository" % file)
-        os.system("git update-index '%s'" % file)
+        os.system("git update-index --add '%s'" % file)
+        self.cmd_status()
 
     def cmd_stage(self, file):
         if not os.access(file, os.R_OK):
             raise YapError("No such file: %s" % file)
         os.system("git update-index --add '%s'" % file)
+        self.cmd_status()
+
+    def cmd_status(self):
+        branch = get_output("git symbolic-ref HEAD")[0]
+        branch = branch.replace('refs/heads/', '')
+        print "Current branch: %s" % branch
+
+        print "Files with staged changes:"
+
+        if run_command("git rev-parse HEAD"):
+            files = get_output("git ls-files --cached")
+        else:
+            files = get_output("git diff-index --name-only HEAD")
+        for f in files:
+            print "\t%s" % f
+        if not files:
+            print "\t(none)"
+
+        print "Files with unstages changes:"
+        files = get_output("git ls-files -m")
+        for f in files:
+            print "\t%s" % f
+        if not files:
+            print "\t(none)"
 
     def cmd_version(self):
         print "Yap version 0.1"
