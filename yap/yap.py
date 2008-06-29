@@ -183,6 +183,11 @@ class Yap(object):
         os.unlink(tmpfile)
         os.system("git update-ref HEAD '%s'" % commit[0])
 
+    def cmd_uncommit(self):
+        tree = get_output("git rev-parse HEAD^")
+        os.system("git read-tree '%s'" % tree[0])
+        self.cmd_status()
+
     def cmd_version(self):
         print "Yap version 0.1"
 
