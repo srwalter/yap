@@ -1,0 +1,28 @@
+* Yet Another (Git) Porcelain
+    * Use only git plumbing
+    * Make UI cleanups like eg
+        * --staged instead of --cached
+        * "switch" instead of checkout
+    * New features
+        * Track "local" commits to limit history re-writing
+        * Better SVN workflows
+            * Bring metadata / config over in clone?
+            * Keep metadata out of commit message?
+    * Commands
+        * clone
+        * init
+        * add (new files only)
+        * stage (existing files only)
+        * unstage
+        * unedit
+        * commit
+        * uncommit
+        * branch (list/create branch)
+            * -d to remove
+            * -f to remove leaf branch
+        * switch
+        * push
+        * fetch
+        * merge
+        * remote (list/create)
+            * -d to remove
