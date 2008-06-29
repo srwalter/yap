@@ -131,6 +131,11 @@ class Yap(object):
         if not files:
             print "\t(none)"
 
+    def cmd_unedit(self, file):
+        self._assert_file_exists(file)
+        os.system("git checkout-index -f '%s'" % file)
+        self.cmd_status()
+
     def cmd_version(self):
         print "Yap version 0.1"
 
