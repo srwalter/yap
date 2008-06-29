@@ -61,6 +61,10 @@ class Yap(object):
         path = os.path.join(repo, 'yap', 'new-files')
         os.unlink(path)
 
+    def _assert_file_exists(self, file):
+        if not os.access(file, os.R_OK):
+            raise YapError("No such file: %s" % file)
+
     def cmd_clone(self, url, directory=""):
         # XXX: implement in terms of init + remote add + fetch
         os.system("git clone '%s' %s" % (url, directory))
@@ -69,8 +73,7 @@ class Yap(object):
         os.system("git init")
 
     def cmd_add(self, file):
-        if not os.access(file, os.R_OK):
-            raise YapError("No such file: %s" % file)
+        self._assert_file_exists(file)
         x = get_output("git ls-files '%s'" % file)
         if x != []:
             raise YapError("File '%s' already in repository" % file)
@@ -78,14 +81,12 @@ class Yap(object):
         self.cmd_status()
 
     def cmd_stage(self, file):
-        if not os.access(file, os.R_OK):
-            raise YapError("No such file: %s" % file)
+        self._assert_file_exists(file)
         os.system("git update-index --add '%s'" % file)
         self.cmd_status()
 
     def cmd_unstage(self, file):
-        if not os.access(file, os.R_OK):
-            raise YapError("No such file: %s" % file)
+        self._assert_file_exists(file)
         if run_command("git rev-parse HEAD"):
             os.system("git update-index --force-remove '%s'" % file)
         else:
