@@ -56,6 +56,14 @@ class Yap(object):
             x.append(f)
         return x
 
+    def _remove_new_file(self, file):
+        files = self._get_new_files()
+        files = filter(lambda x: x != file, files)
+
+        repo = get_output('git rev-parse --git-dir')[0]
+        path = os.path.join(repo, 'yap', 'new-files')
+        pickle.dump(files, open(path, 'w'))
+
     def _clear_new_files(self):
         repo = get_output('git rev-parse --git-dir')[0]
         path = os.path.join(repo, 'yap', 'new-files')
@@ -78,6 +86,13 @@ class Yap(object):
         if x != []:
             raise YapError("File '%s' already in repository" % file)
         self._add_new_file(file)
+        self.cmd_status()
+
+    def cmd_rm(self, file):
+        self._assert_file_exists(file)
+        if get_output("git ls-files '%s'" % file) != []:
+            os.system("git rm --cached '%s'" % file)
+        self._remove_new_file(file)
         self.cmd_status()
 
     def cmd_stage(self, file):
