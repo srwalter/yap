@@ -87,6 +87,7 @@ class Yap(object):
         return files
 
     def cmd_clone(self, url, directory=""):
+        "<url> [directory]"
         # XXX: implement in terms of init + remote add + fetch
         os.system("git clone '%s' %s" % (url, directory))
 
@@ -94,6 +95,7 @@ class Yap(object):
         os.system("git init")
 
     def cmd_add(self, file):
+        "<file>"
         self._assert_file_exists(file)
         x = get_output("git ls-files '%s'" % file)
         if x != []:
@@ -102,6 +104,7 @@ class Yap(object):
         self.cmd_status()
 
     def cmd_rm(self, file):
+        "<file>"
         self._assert_file_exists(file)
         if get_output("git ls-files '%s'" % file) != []:
             os.system("git rm --cached '%s'" % file)
@@ -109,12 +112,14 @@ class Yap(object):
         self.cmd_status()
 
     def cmd_stage(self, file, quiet=False):
+        "<file>"
         self._assert_file_exists(file)
         os.system("git update-index --add '%s'" % file)
         if not quiet:
             self.cmd_status()
 
     def cmd_unstage(self, file):
+        "<file>"
         self._assert_file_exists(file)
         if run_command("git rev-parse HEAD"):
             os.system("git update-index --force-remove '%s'" % file)
@@ -142,6 +147,7 @@ class Yap(object):
             print "\t(none)"
 
     def cmd_unedit(self, file):
+        "<file>"
         self._assert_file_exists(file)
         os.system("git checkout-index -f '%s'" % file)
         self.cmd_status()
