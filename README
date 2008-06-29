@@ -3,6 +3,7 @@
     * Make UI cleanups like eg
         * --staged instead of --cached
         * "switch" instead of checkout
+        * show "status" after any modifying command
     * New features
         * Track "local" commits to limit history re-writing
         * Better SVN workflows
@@ -13,6 +14,7 @@
         * init
         * add (new files only)
         * stage (existing files only)
+        * status
         * unstage
         * unedit
         * commit
@@ -24,5 +26,6 @@
         * push
         * fetch
         * merge
+        * resolved
         * remote (list/create)
             * -d to remove
