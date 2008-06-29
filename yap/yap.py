@@ -2,6 +2,7 @@ import sys
 import os
 import getopt
 import pickle
+import tempfile
 
 def get_output(cmd):
     fd = os.popen(cmd)
@@ -73,6 +74,18 @@ class Yap(object):
         if not os.access(file, os.R_OK):
             raise YapError("No such file: %s" % file)
 
+    def _get_staged_files(self):
+        if run_command("git rev-parse HEAD"):
+            files = get_output("git ls-files --cached")
+        else:
+            files = get_output("git diff-index --cached --name-only HEAD")
+        return files
+
+    def _get_unstaged_files(self):
+        files = self._get_new_files()
+        files += get_output("git ls-files -m")
+        return files
+
     def cmd_clone(self, url, directory=""):
         # XXX: implement in terms of init + remote add + fetch
         os.system("git clone '%s' %s" % (url, directory))
@@ -95,10 +108,11 @@ class Yap(object):
         self._remove_new_file(file)
         self.cmd_status()
 
-    def cmd_stage(self, file):
+    def cmd_stage(self, file, quiet=False):
         self._assert_file_exists(file)
         os.system("git update-index --add '%s'" % file)
-        self.cmd_status()
+        if not quiet:
+            self.cmd_status()
 
     def cmd_unstage(self, file):
         self._assert_file_exists(file)
@@ -114,18 +128,14 @@ class Yap(object):
         print "Current branch: %s" % branch
 
         print "Files with staged changes:"
-        if run_command("git rev-parse HEAD"):
-            files = get_output("git ls-files --cached")
-        else:
-            files = get_output("git diff-index --cached --name-only HEAD")
+        files = self._get_staged_files()
         for f in files:
             print "\t%s" % f
         if not files:
             print "\t(none)"
 
         print "Files with unstaged changes:"
-        files = self._get_new_files()
-        files += get_output("git ls-files -m")
+        files = self._get_unstaged_files()
         for f in files:
             print "\t%s" % f
         if not files:
@@ -135,6 +145,43 @@ class Yap(object):
         self._assert_file_exists(file)
         os.system("git checkout-index -f '%s'" % file)
         self.cmd_status()
+
+    def cmd_commit(self):
+        if self._get_unstaged_files():
+            if self._get_staged_files():
+                raise YapError("Staged and unstaged changes present.  Specify what to commit")
+            os.system("git diff-files -p | git apply --cached 2>/dev/null")
+            for f in self._get_new_files():
+                self.cmd_stage(f, True)
+
+        if not self._get_staged_files():
+            raise YapError("No changes to commit")
+
+        tree = get_output("git write-tree")[0]
+
+        parent = get_output("git rev-parse HEAD 2> /dev/null")[0]
+
+        if os.environ.has_key('YAP_EDITOR'):
+            editor = os.environ['YAP_EDITOR']
+        elif os.environ.has_key('GIT_EDITOR'):
+            editor = os.environ['GIT_EDITOR']
+        elif os.environ.has_key('EDITOR'):
+            editor = os.environ['EDITOR']
+        else:
+            editor = "vi"
+
+        fd, tmpfile = tempfile.mkstemp("yap")
+        os.close(fd)
+        if os.system("%s '%s'" % (editor, tmpfile)) != 0:
+            raise YapError("Editing commit message failed")
+        if parent != 'HEAD':
+            commit = get_output("git commit-tree '%s' -p '%s' < '%s'" % (tree, parent, tmpfile))
+        else:
+            commit = get_output("git commit-tree '%s' < '%s'" % (tree, tmpfile))
+        if not commit:
+            raise YapError("Commit failed; no log message?")
+        os.unlink(tmpfile)
+        os.system("git update-ref HEAD '%s'" % commit[0])
 
     def cmd_version(self):
         print "Yap version 0.1"
