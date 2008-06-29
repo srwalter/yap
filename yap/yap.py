@@ -119,7 +119,7 @@ class Yap(object):
         if run_command("git rev-parse HEAD"):
             os.system("git update-index --force-remove '%s'" % file)
         else:
-            os.system("git diff-index HEAD '%s' | git apply -R --cached" % file)
+            os.system("git diff-index -p HEAD '%s' | git apply -R --cached" % file)
         self.cmd_status()
 
     def cmd_status(self):
