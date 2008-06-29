@@ -1,6 +1,7 @@
 import sys
 import os
 import getopt
+import pickle
 
 def get_output(cmd):
     fd = os.popen(cmd)
@@ -27,6 +28,39 @@ def takes_options(options):
     return decorator
 
 class Yap(object):
+    def _add_new_file(self, file):
+        repo = get_output('git rev-parse --git-dir')[0]
+        dir = os.path.join(repo, 'yap')
+        try:
+            os.mkdir(dir)
+        except OSError:
+            pass
+        files = self._get_new_files()
+        files.append(file)
+        path = os.path.join(dir, 'new-files')
+        pickle.dump(files, open(path, 'w'))
+
+    def _get_new_files(self):
+        repo = get_output('git rev-parse --git-dir')[0]
+        path = os.path.join(repo, 'yap', 'new-files')
+        try:
+            files = pickle.load(file(path))
+        except IOError:
+            files = []
+
+        x = []
+        for f in files:
+            # if f in the index
+            if get_output("git ls-files --cached '%s'" % f) != []:
+                continue
+            x.append(f)
+        return x
+
+    def _clear_new_files(self):
+        repo = get_output('git rev-parse --git-dir')[0]
+        path = os.path.join(repo, 'yap', 'new-files')
+        os.unlink(path)
+
     def cmd_clone(self, url, directory=""):
         # XXX: implement in terms of init + remote add + fetch
         os.system("git clone '%s' %s" % (url, directory))
@@ -40,7 +74,7 @@ class Yap(object):
         x = get_output("git ls-files '%s'" % file)
         if x != []:
             raise YapError("File '%s' already in repository" % file)
-        os.system("git update-index --add '%s'" % file)
+        self._add_new_file(file)
         self.cmd_status()
 
     def cmd_stage(self, file):
@@ -64,7 +98,6 @@ class Yap(object):
         print "Current branch: %s" % branch
 
         print "Files with staged changes:"
-
         if run_command("git rev-parse HEAD"):
             files = get_output("git ls-files --cached")
         else:
@@ -75,7 +108,8 @@ class Yap(object):
             print "\t(none)"
 
         print "Files with unstages changes:"
-        files = get_output("git ls-files -m")
+        files = self._get_new_files()
+        files += get_output("git ls-files -m")
         for f in files:
             print "\t%s" % f
         if not files:

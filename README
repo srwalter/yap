@@ -15,6 +15,7 @@
         * clone
         * init
         * add (new files only)
+        * rm
         * stage (existing files only)
         * status
         * unstage
