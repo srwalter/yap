@@ -108,15 +108,15 @@ class Yap(object):
                     flags = dict()
 
                 meth(*args, **flags)
-            except (TypeError, getopt.GetoptError), e:
+            except (TypeError, getopt.GetoptError):
                 if debug:
-                    raise e
+                    raise
                 print "%s %s %s" % (sys.argv[0], command, meth.__doc__)
             except YapError, e:
                 print >> sys.stderr, e
                 sys.exit(1)
-        except AttributeError, e:
+        except AttributeError:
             if debug:
-                raise e
+                raise
             self.cmd_usage()
             sys.exit(2)
