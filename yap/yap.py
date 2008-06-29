@@ -49,6 +49,15 @@ class Yap(object):
         os.system("git update-index --add '%s'" % file)
         self.cmd_status()
 
+    def cmd_unstage(self, file):
+        if not os.access(file, os.R_OK):
+            raise YapError("No such file: %s" % file)
+        if run_command("git rev-parse HEAD"):
+            os.system("git update-index --force-remove '%s'" % file)
+        else:
+            os.system("git diff-index HEAD '%s' | git apply -R --cached" % file)
+        self.cmd_status()
+
     def cmd_status(self):
         branch = get_output("git symbolic-ref HEAD")[0]
         branch = branch.replace('refs/heads/', '')
