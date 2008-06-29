@@ -152,9 +152,13 @@ class Yap(object):
         os.system("git checkout-index -f '%s'" % file)
         self.cmd_status()
 
-    def cmd_commit(self):
-        if self._get_unstaged_files():
-            if self._get_staged_files():
+    @takes_options("ad")
+    def cmd_commit(self, **flags):
+        if '-a' in flags and '-d' in flags:
+            raise YapError("Conflicting flags: -a and -d")
+
+        if '-d' not in flags and self._get_unstaged_files():
+            if '-a' not in flags and self._get_staged_files():
                 raise YapError("Staged and unstaged changes present.  Specify what to commit")
             os.system("git diff-files -p | git apply --cached 2>/dev/null")
             for f in self._get_new_files():
@@ -188,6 +192,7 @@ class Yap(object):
             raise YapError("Commit failed; no log message?")
         os.unlink(tmpfile)
         os.system("git update-ref HEAD '%s'" % commit[0])
+        self.cmd_status()
 
     def cmd_uncommit(self):
         tree = get_output("git rev-parse HEAD^")
@@ -214,7 +219,7 @@ class Yap(object):
         try:
             meth = self.__getattribute__("cmd_"+command)
             try:
-                if "option" in meth.__dict__:
+                if "options" in meth.__dict__:
                     flags, args = getopt.getopt(args, meth.options)
                     flags = dict(flags)
                 else:
