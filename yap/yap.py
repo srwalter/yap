@@ -221,12 +221,14 @@ class Yap(object):
 
     @takes_options("r:")
     def cmd_log(self, *paths, **flags):
+        "[-r <rev>] <path>..."
         rev = flags.get('-r', 'HEAD')
         paths = ' '.join(paths)
         os.system("git log --name-status '%s' -- %s" % (rev, paths))
 
     @takes_options("ud")
     def cmd_diff(self, **flags):
+        "[ -u | -d ]"
         if '-u' in flags and '-d' in flags:
             raise YapError("Conflicting flags: -u and -d")
 
@@ -240,6 +242,7 @@ class Yap(object):
 
     @takes_options("fd:")
     def cmd_branch(self, branch=None, **flags):
+        "[ [-f] -d <branch> | <branch> ]"
         force = '-f' in flags
         if '-d' in flags:
             self._delete_branch(flags['-d'], force)
@@ -261,6 +264,21 @@ class Yap(object):
                 print "  ",
             b = b.replace('refs/heads/', '')
             print b
+
+    def cmd_switch(self, branch):
+        "<branch>"
+        ref = get_output("git rev-parse 'refs/heads/%s'" % branch)
+        if not ref:
+            raise YapError("No such branch: %s" % branch)
+
+        # XXX: support merging like git-checkout
+        if self._get_unstaged_files() or self._get_staged_files():
+            raise YapError("You have uncommitted changes.  Commit them first")
+
+        os.system("git symbolic-ref HEAD refs/heads/'%s'" % branch)
+        os.system("git read-tree HEAD")
+        os.system("git checkout-index -f -a")
+        self.cmd_branch()
 
     def cmd_usage(self):
         print >> sys.stderr, "usage: %s <command>" % sys.argv[0]
