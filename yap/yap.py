@@ -163,10 +163,16 @@ class Yap(object):
         if not files:
             print "\t(none)"
 
-    def cmd_unedit(self, file):
-        "<file>"
-        self._assert_file_exists(file)
-        os.system("git checkout-index -f '%s'" % file)
+    @takes_options("a")
+    def cmd_revert(self, file=None, **flags):
+        "(-a | <file>)"
+        if '-a' in flags:
+            os.system("git checkout-index -f -a")
+        elif file is not None:
+            self._assert_file_exists(file)
+            os.system("git checkout-index -f '%s'" % file)
+        else:
+            raise TypeError
         self.cmd_status()
 
     @takes_options("ad")

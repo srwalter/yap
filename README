@@ -29,9 +29,15 @@
             * -f to remove leaf branch
         * switch
         * point
+
+TODO:
+    * Commands
         * push
         * fetch
         * merge
         * resolved
         * remote (list/create)
             * -d to remove
+    * Use pager for diff
+    * Support multiple files as args
+    * Support revert -a
