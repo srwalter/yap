@@ -86,6 +86,23 @@ class Yap(object):
         files += get_output("git ls-files -m")
         return files
 
+    def _delete_branch(self, branch, force):
+        current = get_output("git symbolic-ref HEAD")[0]
+        current = current.replace('refs/heads/', '')
+        if branch == current:
+            raise YapError("Can't delete current branch")
+
+        ref = get_output("git rev-parse 'refs/heads/%s'" % branch)
+        if not ref:
+            raise YapError("No such branch: %s" % branch)
+        os.system("git update-ref -d 'refs/heads/%s' '%s'" % (branch, ref[0]))
+
+        if not force:
+            name = get_output("git name-rev --name-only '%s'" % ref[0])[0]
+            if name == 'undefined':
+                os.system("git update-ref 'refs/heads/%s' '%s'" % (branch, ref[0]))
+                raise YapError("Refusing to delete leaf branch (use -f to force)")
+
     def cmd_clone(self, url, directory=""):
         "<url> [directory]"
         # XXX: implement in terms of init + remote add + fetch
@@ -201,6 +218,49 @@ class Yap(object):
 
     def cmd_version(self):
         print "Yap version 0.1"
+
+    @takes_options("r:")
+    def cmd_log(self, *paths, **flags):
+        rev = flags.get('-r', 'HEAD')
+        paths = ' '.join(paths)
+        os.system("git log --name-status '%s' -- %s" % (rev, paths))
+
+    @takes_options("ud")
+    def cmd_diff(self, **flags):
+        if '-u' in flags and '-d' in flags:
+            raise YapError("Conflicting flags: -u and -d")
+
+        os.system("git update-index -q --refresh")
+        if '-u' in flags:
+            os.system("git diff-files -p")
+        elif '-d' in flags:
+            os.system("git diff-index --cached -p HEAD")
+        else:
+            os.system("git diff-index -p HEAD")
+
+    @takes_options("fd:")
+    def cmd_branch(self, branch=None, **flags):
+        force = '-f' in flags
+        if '-d' in flags:
+            self._delete_branch(flags['-d'], force)
+            self.cmd_branch()
+            return
+
+        if branch is not None:
+            ref = get_output("git rev-parse HEAD")
+            if not ref:
+                raise YapError("No branch point yet.  Make a commit")
+            os.system("git update-ref 'refs/heads/%s' '%s'" % (branch, ref[0]))
+
+        current = get_output("git symbolic-ref HEAD")[0]
+        branches = get_output("git for-each-ref --format='%(refname)' 'refs/heads/*'")
+        for b in branches:
+            if b == current:
+                print "* ",
+            else:
+                print "  ",
+            b = b.replace('refs/heads/', '')
+            print b
 
     def cmd_usage(self):
         print >> sys.stderr, "usage: %s <command>" % sys.argv[0]
