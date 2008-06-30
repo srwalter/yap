@@ -28,6 +28,7 @@
             * -d to remove
             * -f to remove leaf branch
         * switch
+        * point
         * push
         * fetch
         * merge

@@ -280,6 +280,31 @@ class Yap(object):
         os.system("git checkout-index -f -a")
         self.cmd_branch()
 
+    @takes_options("f")
+    def cmd_point(self, where, **flags):
+        "<where>"
+        head = get_output("git rev-parse HEAD")
+        if not head:
+            raise YapError("No commit yet; nowhere to point")
+
+        ref = get_output("git rev-parse '%s'" % where)
+        if not ref:
+            raise YapError("Not a valid ref: %s" % where)
+
+        if self._get_unstaged_files() or self._get_staged_files():
+            raise YapError("You have uncommitted changes.  Commit them first")
+
+        os.system("git update-ref HEAD '%s'" % ref[0])
+
+        if '-f' not in flags:
+            name = get_output("git name-rev --name-only '%s'" % head[0])[0]
+            if name == "undefined":
+                os.system("git update-ref HEAD '%s'" % head[0])
+                raise YapError("Pointing there will lose commits.  Use -f to force")
+
+        os.system("git read-tree HEAD")
+        os.system("git checkout-index -f -a")
+
     def cmd_usage(self):
         print >> sys.stderr, "usage: %s <command>" % sys.argv[0]
         print >> sys.stderr, "  valid commands: version"
