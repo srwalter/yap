@@ -112,6 +112,34 @@ class Yap(object):
         else:
             return "more"
 
+    def _add_one(self, file):
+        self._assert_file_exists(file)
+        x = get_output("git ls-files '%s'" % file)
+        if x != []:
+            raise YapError("File '%s' already in repository" % file)
+        self._add_new_file(file)
+
+    def _rm_one(self, file):
+        self._assert_file_exists(file)
+        if get_output("git ls-files '%s'" % file) != []:
+            os.system("git rm --cached '%s'" % file)
+        self._remove_new_file(file)
+
+    def _stage_one(self, file):
+        self._assert_file_exists(file)
+        os.system("git update-index --add '%s'" % file)
+
+    def _unstage_one(self, file):
+        self._assert_file_exists(file)
+        if run_command("git rev-parse HEAD"):
+            os.system("git update-index --force-remove '%s'" % file)
+        else:
+            os.system("git diff-index -p HEAD '%s' | git apply -R --cached" % file)
+
+    def _revert_one(self, file):
+        self._assert_file_exists(file)
+        os.system("git checkout-index -f '%s'" % file)
+
     def cmd_clone(self, url, directory=""):
         "<url> [directory]"
         # XXX: implement in terms of init + remote add + fetch
@@ -120,37 +148,40 @@ class Yap(object):
     def cmd_init(self):
         os.system("git init")
 
-    def cmd_add(self, file):
-        "<file>"
-        self._assert_file_exists(file)
-        x = get_output("git ls-files '%s'" % file)
-        if x != []:
-            raise YapError("File '%s' already in repository" % file)
-        self._add_new_file(file)
+    def cmd_add(self, *files):
+        "<file>..."
+        if not files:
+            raise TypeError
+        
+        for f in files:
+            self._add_one(f)
         self.cmd_status()
 
-    def cmd_rm(self, file):
-        "<file>"
-        self._assert_file_exists(file)
-        if get_output("git ls-files '%s'" % file) != []:
-            os.system("git rm --cached '%s'" % file)
-        self._remove_new_file(file)
+    def cmd_rm(self, *files):
+        "<file>..."
+        if not files:
+            raise TypeError
+        
+        for f in files:
+            self._rm_one(f)
         self.cmd_status()
 
-    def cmd_stage(self, file, quiet=False):
-        "<file>"
-        self._assert_file_exists(file)
-        os.system("git update-index --add '%s'" % file)
-        if not quiet:
-            self.cmd_status()
+    def cmd_stage(self, *files):
+        "<file>..."
+        if not files:
+            raise TypeError
+        
+        for f in files:
+            self._stage_one(f)
+        self.cmd_status()
 
-    def cmd_unstage(self, file):
-        "<file>"
-        self._assert_file_exists(file)
-        if run_command("git rev-parse HEAD"):
-            os.system("git update-index --force-remove '%s'" % file)
-        else:
-            os.system("git diff-index -p HEAD '%s' | git apply -R --cached" % file)
+    def cmd_unstage(self, *files):
+        "<file>..."
+        if not files:
+            raise TypeError
+        
+        for f in files:
+            self._unstage_one(f)
         self.cmd_status()
 
     def cmd_status(self):
@@ -173,15 +204,17 @@ class Yap(object):
             print "\t(none)"
 
     @takes_options("a")
-    def cmd_revert(self, file=None, **flags):
+    def cmd_revert(self, *files, **flags):
         "(-a | <file>)"
         if '-a' in flags:
             os.system("git checkout-index -f -a")
-        elif file is not None:
-            self._assert_file_exists(file)
-            os.system("git checkout-index -f '%s'" % file)
-        else:
+            return
+
+        if not files:
             raise TypeError
+
+        for f in files:
+            self._revert_one(f)
         self.cmd_status()
 
     @takes_options("ad")
@@ -194,7 +227,7 @@ class Yap(object):
                 raise YapError("Staged and unstaged changes present.  Specify what to commit")
             os.system("git diff-files -p | git apply --cached 2>/dev/null")
             for f in self._get_new_files():
-                self.cmd_stage(f, True)
+                self._stage_one(f)
 
         if not self._get_staged_files():
             raise YapError("No changes to commit")

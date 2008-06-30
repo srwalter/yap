@@ -38,4 +38,4 @@ TODO:
         * resolved
         * remote (list/create)
             * -d to remove
-    * Support multiple files as args
+    * Better commit template message
