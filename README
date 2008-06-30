@@ -38,6 +38,4 @@ TODO:
         * resolved
         * remote (list/create)
             * -d to remove
-    * Use pager for diff
     * Support multiple files as args
-    * Support revert -a

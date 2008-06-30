@@ -102,6 +102,15 @@ class Yap(object):
             if name == 'undefined':
                 os.system("git update-ref 'refs/heads/%s' '%s'" % (branch, ref[0]))
                 raise YapError("Refusing to delete leaf branch (use -f to force)")
+    def _get_pager_cmd(self):
+        if 'YAP_PAGER' in os.environ:
+            return os.environ['YAP_PAGER']
+        elif 'GIT_PAGER' in os.environ:
+            return os.environ['GIT_PAGER']
+        elif 'PAGER' in os.environ:
+            return os.environ['PAGER']
+        else:
+            return "more"
 
     def cmd_clone(self, url, directory=""):
         "<url> [directory]"
@@ -238,13 +247,15 @@ class Yap(object):
         if '-u' in flags and '-d' in flags:
             raise YapError("Conflicting flags: -u and -d")
 
+        pager = self._get_pager_cmd()
+
         os.system("git update-index -q --refresh")
         if '-u' in flags:
-            os.system("git diff-files -p")
+            os.system("git diff-files -p | %s" % pager)
         elif '-d' in flags:
-            os.system("git diff-index --cached -p HEAD")
+            os.system("git diff-index --cached -p HEAD | %s" % pager)
         else:
-            os.system("git diff-index -p HEAD")
+            os.system("git diff-index -p HEAD | %s" % pager)
 
     @takes_options("fd:")
     def cmd_branch(self, branch=None, **flags):
