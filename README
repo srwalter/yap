@@ -39,3 +39,4 @@ TODO:
         * remote (list/create)
             * -d to remove
     * Better commit template message
+    * Fixups for running outside root?
