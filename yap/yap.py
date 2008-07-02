@@ -261,7 +261,7 @@ class Yap(object):
 
     def cmd_uncommit(self):
         tree = get_output("git rev-parse HEAD^")
-        os.system("git read-tree '%s'" % tree[0])
+        os.system("git update-ref -m uncommit HEAD '%s'" % tree[0])
         self.cmd_status()
 
     def cmd_version(self):
