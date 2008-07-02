@@ -11,32 +11,23 @@
         * Better SVN workflows
             * Bring metadata / config over in clone?
             * Keep metadata out of commit message?
-    * Commands
-        * clone
-        * init
-        * add (new files only)
-        * rm
-        * stage (existing files only)
-        * status
-        * diff
-        * unstage
-        * unedit
-        * commit
-        * log
-        * uncommit
-        * branch (list/create branch)
-            * -d to remove
-            * -f to remove leaf branch
-        * switch
-        * point
 
 TODO:
     * Commands
+	* show
         * push
         * fetch
         * merge
         * resolved
         * remote (list/create)
             * -d to remove
+	* history
+	    * amend (amend an arbitrary commit with stash/rebase)
+	    * drop (remove a commit from history)
+	* cherry-pick
+	    * -r to apply the opposite
     * Better commit template message
+	* prepopulate with old commit message after uncommit?
     * Fixups for running outside root?
+	* staged has full path, unstaged has relative path
+
