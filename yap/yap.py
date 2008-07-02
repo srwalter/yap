@@ -357,7 +357,7 @@ class Yap(object):
 
     def cmd_usage(self):
         print >> sys.stderr, "usage: %s <command>" % sys.argv[0]
-        print >> sys.stderr, "  valid commands: version"
+        print >> sys.stderr, "  valid commands: init add rm stage unstage status revert commit uncommit log diff branch switch point version"
 
     def main(self, args):
         if len(args) < 1:
