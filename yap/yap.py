@@ -354,10 +354,53 @@ class Yap(object):
 
         os.system("git read-tree HEAD")
         os.system("git checkout-index -f -a")
+        os.system("git update-index --refresh")
+
+    def cmd_history(self, subcmd, commit):
+        "amend | drop <commit>"
+
+        if subcmd not in ("amend", "drop"):
+            raise TypeError
+
+        # XXX: ensure no rebase in progress
+
+        if subcmd == "amend":
+            # XXX: Use cmd_commit rules
+            stash = get_output("git stash create")
+            os.system("git reset --hard")
+            if not stash:
+                raise YapError("Failed to stash; no changes?")
+
+        fd, tmpfile = tempfile.mkstemp("yap")
+        os.close(fd)
+        try:
+            os.system("git format-patch -k --stdout '%s' > %s" % (commit, tmpfile))
+            if subcmd == "amend":
+                self.cmd_point(commit, **{'-f': True})
+                run_command("git stash apply --index %s" % stash[0])
+                # XXX: use cmd_commit instead
+                os.system("git commit --amend")
+                stash = get_output("git stash create")
+                os.system("git reset --hard")
+            else:
+                self.cmd_point("%s^" % commit, **{'-f': True})
+
+            stat = os.stat(tmpfile)
+            size = stat[6]
+            if size > 0:
+                rc = os.system("git am -3 '%s' > /dev/null" % tmpfile)
+                if (rc):
+                    raise YapError("Failed to apply changes")
+
+            if subcmd == "amend" and stash:
+                run_command("git stash apply %s" % stash[0])
+        finally:
+            os.unlink(tmpfile)
+        self.cmd_status()
 
     def cmd_usage(self):
         print >> sys.stderr, "usage: %s <command>" % sys.argv[0]
-        print >> sys.stderr, "  valid commands: init add rm stage unstage status revert commit uncommit log diff branch switch point version"
+        print >> sys.stderr, "  valid commands: init add rm stage unstage status revert commit uncommit log diff branch switch point history version"
 
     def main(self, args):
         if len(args) < 1:

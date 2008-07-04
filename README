@@ -21,13 +21,12 @@ TODO:
         * resolved
         * remote (list/create)
             * -d to remove
-	* history
-	    * amend (amend an arbitrary commit with stash/rebase)
-	    * drop (remove a commit from history)
 	* cherry-pick
 	    * -r to apply the opposite
     * Better commit template message
 	* prepopulate with old commit message after uncommit?
     * Fixups for running outside root?
 	* staged has full path, unstaged has relative path
-
+    * Handle unmerged files in status
+    * No commit while rebasing/am
+    * Fix point with tags
