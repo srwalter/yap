@@ -161,6 +161,73 @@ class Yap(object):
         commit['log'] = '\n'.join(commit['log'])
         return commit
 
+    def _check_commit(self, **flags):
+        if '-a' in flags and '-d' in flags:
+            raise YapError("Conflicting flags: -a and -d")
+
+        if '-d' not in flags and self._get_unstaged_files():
+            if '-a' not in flags and self._get_staged_files():
+                raise YapError("Staged and unstaged changes present.  Specify what to commit")
+            os.system("git diff-files -p | git apply --cached 2>/dev/null")
+            for f in self._get_new_files():
+                self._stage_one(f)
+
+        if not self._get_staged_files():
+            raise YapError("No changes to commit")
+
+    def _do_uncommit(self):
+        commit = self._parse_commit("HEAD")
+        repo = get_output('git rev-parse --git-dir')[0]
+        dir = os.path.join(repo, 'yap')
+        try:
+            os.mkdir(dir)
+        except OSError:
+            pass
+        msg_file = os.path.join(dir, 'msg')
+        fd = file(msg_file, 'w')
+        print >>fd, commit['log']
+        fd.close()
+
+        tree = get_output("git rev-parse HEAD^")
+        os.system("git update-ref -m uncommit HEAD '%s'" % tree[0])
+
+    def _do_commit(self):
+        tree = get_output("git write-tree")[0]
+        parent = get_output("git rev-parse HEAD 2> /dev/null")[0]
+
+        if os.environ.has_key('YAP_EDITOR'):
+            editor = os.environ['YAP_EDITOR']
+        elif os.environ.has_key('GIT_EDITOR'):
+            editor = os.environ['GIT_EDITOR']
+        elif os.environ.has_key('EDITOR'):
+            editor = os.environ['EDITOR']
+        else:
+            editor = "vi"
+
+        fd, tmpfile = tempfile.mkstemp("yap")
+        os.close(fd)
+
+        repo = get_output('git rev-parse --git-dir')[0]
+        msg_file = os.path.join(repo, 'yap', 'msg')
+        if os.access(msg_file, os.R_OK):
+            fd1 = file(msg_file)
+            fd2 = file(tmpfile, 'w')
+            for l in fd1.xreadlines():
+                print >>fd2, l.strip()
+            fd2.close()
+            os.unlink(msg_file)
+
+        if os.system("%s '%s'" % (editor, tmpfile)) != 0:
+            raise YapError("Editing commit message failed")
+        if parent != 'HEAD':
+            commit = get_output("git commit-tree '%s' -p '%s' < '%s'" % (tree, parent, tmpfile))
+        else:
+            commit = get_output("git commit-tree '%s' < '%s'" % (tree, tmpfile))
+        if not commit:
+            raise YapError("Commit failed; no log message?")
+        os.unlink(tmpfile)
+        os.system("git update-ref HEAD '%s'" % commit[0])
+
     def cmd_clone(self, url, directory=""):
         "<url> [directory]"
         # XXX: implement in terms of init + remote add + fetch
@@ -243,72 +310,12 @@ class Yap(object):
 
     @takes_options("ad")
     def cmd_commit(self, **flags):
-        if '-a' in flags and '-d' in flags:
-            raise YapError("Conflicting flags: -a and -d")
-
-        if '-d' not in flags and self._get_unstaged_files():
-            if '-a' not in flags and self._get_staged_files():
-                raise YapError("Staged and unstaged changes present.  Specify what to commit")
-            os.system("git diff-files -p | git apply --cached 2>/dev/null")
-            for f in self._get_new_files():
-                self._stage_one(f)
-
-        if not self._get_staged_files():
-            raise YapError("No changes to commit")
-
-        tree = get_output("git write-tree")[0]
-
-        parent = get_output("git rev-parse HEAD 2> /dev/null")[0]
-
-        if os.environ.has_key('YAP_EDITOR'):
-            editor = os.environ['YAP_EDITOR']
-        elif os.environ.has_key('GIT_EDITOR'):
-            editor = os.environ['GIT_EDITOR']
-        elif os.environ.has_key('EDITOR'):
-            editor = os.environ['EDITOR']
-        else:
-            editor = "vi"
-
-        fd, tmpfile = tempfile.mkstemp("yap")
-        os.close(fd)
-
-        repo = get_output('git rev-parse --git-dir')[0]
-        msg_file = os.path.join(repo, 'yap', 'msg')
-        if os.access(msg_file, os.R_OK):
-            fd1 = file(msg_file)
-            fd2 = file(tmpfile, 'w')
-            for l in fd1.xreadlines():
-                print >>fd2, l.strip()
-            fd2.close()
-            os.unlink(msg_file)
-
-        if os.system("%s '%s'" % (editor, tmpfile)) != 0:
-            raise YapError("Editing commit message failed")
-        if parent != 'HEAD':
-            commit = get_output("git commit-tree '%s' -p '%s' < '%s'" % (tree, parent, tmpfile))
-        else:
-            commit = get_output("git commit-tree '%s' < '%s'" % (tree, tmpfile))
-        if not commit:
-            raise YapError("Commit failed; no log message?")
-        os.unlink(tmpfile)
-        os.system("git update-ref HEAD '%s'" % commit[0])
+        self._check_commit(**flags)
+        self._do_commit()
         self.cmd_status()
 
     def cmd_uncommit(self):
-        commit = self._parse_commit("HEAD")
-        repo = get_output('git rev-parse --git-dir')[0]
-        dir = os.path.join(repo, 'yap')
-        try:
-            os.mkdir(dir)
-        except OSError:
-            pass
-        msg_file = os.path.join(dir, 'msg')
-        fd = file(msg_file, 'w')
-        print >>fd, commit['log']
-        fd.close()
-
-        tree = get_output("git rev-parse HEAD^")
-        os.system("git update-ref -m uncommit HEAD '%s'" % tree[0])
+        self._do_uncommit()
         self.cmd_status()
 
     def cmd_version(self):
@@ -408,20 +415,42 @@ class Yap(object):
         os.system("git checkout-index -f -a")
         os.system("git update-index --refresh")
 
-    def cmd_history(self, subcmd, commit):
+    def cmd_history(self, subcmd, *args):
         "amend | drop <commit>"
 
         if subcmd not in ("amend", "drop"):
             raise TypeError
 
-        # XXX: ensure no rebase in progress
+        if subcmd == "amend":
+            flags, args = getopt.getopt(args, "ad")
+            flags = dict(flags)
+
+        if len(args) > 1:
+            raise TypeError
+        if args:
+            commit = args[0]
+        else:
+            commit = "HEAD"
+
+        if run_command("git rev-parse --verify '%s'" % commit):
+            raise YapError("Not a valid commit: %s" % commit)
+
+        repo = get_output('git rev-parse --git-dir')[0]
+        dotest = os.path.join(repo, '.dotest')
+        if os.access(dotest, os.R_OK):
+            raise YapError("A git operation is in progress.  Complete it first")
+        dotest = os.path.join(repo, '..', '.dotest')
+        if os.access(dotest, os.R_OK):
+            raise YapError("A git operation is in progress.  Complete it first")
 
         if subcmd == "amend":
-            # XXX: Use cmd_commit rules
-            stash = get_output("git stash create")
-            os.system("git reset --hard")
-            if not stash:
-                raise YapError("Failed to stash; no changes?")
+            self._check_commit(**flags)
+
+        stash = get_output("git stash create")
+        run_command("git reset --hard")
+
+        if subcmd == "amend" and not stash:
+            raise YapError("Failed to stash; no changes?")
 
         fd, tmpfile = tempfile.mkstemp("yap")
         os.close(fd)
@@ -430,10 +459,10 @@ class Yap(object):
             if subcmd == "amend":
                 self.cmd_point(commit, **{'-f': True})
                 run_command("git stash apply --index %s" % stash[0])
-                # XXX: use cmd_commit instead
-                os.system("git commit --amend")
+                self._do_uncommit()
+                self._do_commit()
                 stash = get_output("git stash create")
-                os.system("git reset --hard")
+                run_command("git reset --hard")
             else:
                 self.cmd_point("%s^" % commit, **{'-f': True})
 
@@ -444,7 +473,7 @@ class Yap(object):
                 if (rc):
                     raise YapError("Failed to apply changes")
 
-            if subcmd == "amend" and stash:
+            if stash:
                 run_command("git stash apply %s" % stash[0])
         finally:
             os.unlink(tmpfile)
