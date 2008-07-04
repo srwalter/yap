@@ -347,6 +347,11 @@ class Yap(object):
         if self._get_unstaged_files() or self._get_staged_files():
             raise YapError("You have uncommitted changes.  Commit them first")
 
+        type = get_output("git cat-file -t '%s'" % ref[0])
+        if type and type[0] == "tag":
+            tag = get_output("git cat-file tag '%s'" % ref[0])
+            ref[0] = tag[0].split(' ')[1]
+
         os.system("git update-ref HEAD '%s'" % ref[0])
 
         if '-f' not in flags:
