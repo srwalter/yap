@@ -495,9 +495,21 @@ To skip the problematic patch, run \"yap history skip\"."""
             os.unlink(tmpfile)
         self.cmd_status()
 
+    def cmd_show(self, commit="HEAD"):
+        "[commit]"
+        os.system("git show '%s'" % commit)
+
+    @takes_options("r")
+    def cmd_cherry_pick(self, commit, **flags):
+        "[-r] <commit>"
+        if '-r' in flags:
+            os.system("git revert '%s'" % commit)
+        else:
+            os.system("git cherry-pick '%s'" % commit)
+
     def cmd_usage(self):
         print >> sys.stderr, "usage: %s <command>" % sys.argv[0]
-        print >> sys.stderr, "  valid commands: init add rm stage unstage status revert commit uncommit log diff branch switch point history version"
+        print >> sys.stderr, "  valid commands: init add rm stage unstage status revert commit uncommit log show diff branch switch point cherry-pick history version"
 
     def main(self, args):
         if len(args) < 1:
@@ -510,6 +522,7 @@ To skip the problematic patch, run \"yap history skip\"."""
         debug = os.getenv('YAP_DEBUG')
 
         try:
+            command = command.replace('-', '_')
             meth = self.__getattribute__("cmd_"+command)
             try:
                 if "options" in meth.__dict__:

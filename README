@@ -14,15 +14,12 @@
 
 TODO:
     * Commands
-	* show
         * push
         * fetch
         * merge
         * resolved
         * remote (list/create)
             * -d to remove
-	* cherry-pick
-	    * -r to apply the opposite
     * Better commit template message
     * Fixups for running outside root?
     * Handle unmerged files in status
