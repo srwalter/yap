@@ -197,8 +197,11 @@ class Yap(object):
             print "\t(none)"
 
         print "Files with unstaged changes:"
+        prefix = get_output("git rev-parse --show-prefix")
         files = self._get_unstaged_files()
         for f in files:
+            if prefix:
+                f = os.path.join(prefix[0], f)
             print "\t%s" % f
         if not files:
             print "\t(none)"

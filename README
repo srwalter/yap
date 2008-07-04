@@ -26,7 +26,6 @@ TODO:
     * Better commit template message
 	* prepopulate with old commit message after uncommit?
     * Fixups for running outside root?
-	* staged has full path, unstaged has relative path
     * Handle unmerged files in status
     * No commit while rebasing/am
     * Fix point with tags
