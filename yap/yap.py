@@ -428,8 +428,20 @@ class Yap(object):
     def cmd_history(self, subcmd, *args):
         "amend | drop <commit>"
 
-        if subcmd not in ("amend", "drop"):
+        if subcmd not in ("amend", "drop", "continue", "skip"):
             raise TypeError
+
+        resolvemsg = """
+When you have resolved the conflicts run \"yap history continue\".
+To skip the problematic patch, run \"yap history skip\"."""
+
+        if subcmd == "continue":
+            os.system("git am -r --resolvemsg='%s'" % resolvemsg)
+            return
+        if subcmd == "skip":
+            os.system("git reset --hard")
+            os.system("git am --skip --resolvemsg='%s'" % resolvemsg)
+            return
 
         if subcmd == "amend":
             flags, args = getopt.getopt(args, "ad")
@@ -473,7 +485,7 @@ class Yap(object):
             stat = os.stat(tmpfile)
             size = stat[6]
             if size > 0:
-                rc = os.system("git am -3 '%s' > /dev/null" % tmpfile)
+                rc = os.system("git am -3 --resolvemsg=\'%s\' %s" % (resolvemsg, tmpfile))
                 if (rc):
                     raise YapError("Failed to apply changes")
 
