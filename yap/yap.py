@@ -140,6 +140,27 @@ class Yap(object):
         self._assert_file_exists(file)
         os.system("git checkout-index -f '%s'" % file)
 
+    def _parse_commit(self, commit):
+        lines = get_output("git cat-file commit '%s'" % commit)
+        commit = {}
+
+        mode = None
+        for l in lines:
+            if mode != 'commit' and l.strip() == "":
+                mode = 'commit'
+                commit['log'] = []
+                continue
+            if mode == 'commit':
+                commit['log'].append(l)
+                continue
+
+            x = l.split(' ')
+            k = x[0]
+            v = ' '.join(x[1:])
+            commit[k] = v
+        commit['log'] = '\n'.join(commit['log'])
+        return commit
+
     def cmd_clone(self, url, directory=""):
         "<url> [directory]"
         # XXX: implement in terms of init + remote add + fetch
@@ -263,6 +284,18 @@ class Yap(object):
         self.cmd_status()
 
     def cmd_uncommit(self):
+        commit = self._parse_commit("HEAD")
+        repo = get_output('git rev-parse --git-dir')[0]
+        dir = os.path.join(repo, 'yap')
+        try:
+            os.mkdir(dir)
+        except OSError:
+            pass
+        msg_file = os.path.join(dir, 'msg')
+        fd = file(msg_file, 'w')
+        print >>fd, commit['log']
+        fd.close()
+
         tree = get_output("git rev-parse HEAD^")
         os.system("git update-ref -m uncommit HEAD '%s'" % tree[0])
         self.cmd_status()
