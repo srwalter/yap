@@ -271,6 +271,17 @@ class Yap(object):
 
         fd, tmpfile = tempfile.mkstemp("yap")
         os.close(fd)
+
+        repo = get_output('git rev-parse --git-dir')[0]
+        msg_file = os.path.join(repo, 'yap', 'msg')
+        if os.access(msg_file, os.R_OK):
+            fd1 = file(msg_file)
+            fd2 = file(tmpfile, 'w')
+            for l in fd1.xreadlines():
+                print >>fd2, l.strip()
+            fd2.close()
+            os.unlink(msg_file)
+
         if os.system("%s '%s'" % (editor, tmpfile)) != 0:
             raise YapError("Editing commit message failed")
         if parent != 'HEAD':

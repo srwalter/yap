@@ -24,7 +24,6 @@ TODO:
 	* cherry-pick
 	    * -r to apply the opposite
     * Better commit template message
-	* prepopulate with old commit message after uncommit?
     * Fixups for running outside root?
     * Handle unmerged files in status
     * No commit while rebasing/am
