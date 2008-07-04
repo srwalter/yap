@@ -26,4 +26,3 @@ TODO:
     * Better commit template message
     * Fixups for running outside root?
     * Handle unmerged files in status
-    * No commit while rebasing/am

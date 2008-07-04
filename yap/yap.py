@@ -228,6 +228,15 @@ class Yap(object):
         os.unlink(tmpfile)
         os.system("git update-ref HEAD '%s'" % commit[0])
 
+    def _check_rebasing(self):
+        repo = get_output('git rev-parse --git-dir')[0]
+        dotest = os.path.join(repo, '.dotest')
+        if os.access(dotest, os.R_OK):
+            raise YapError("A git operation is in progress.  Complete it first")
+        dotest = os.path.join(repo, '..', '.dotest')
+        if os.access(dotest, os.R_OK):
+            raise YapError("A git operation is in progress.  Complete it first")
+
     def cmd_clone(self, url, directory=""):
         "<url> [directory]"
         # XXX: implement in terms of init + remote add + fetch
@@ -310,6 +319,7 @@ class Yap(object):
 
     @takes_options("ad")
     def cmd_commit(self, **flags):
+        self._check_rebasing()
         self._check_commit(**flags)
         self._do_commit()
         self.cmd_status()
@@ -435,13 +445,7 @@ class Yap(object):
         if run_command("git rev-parse --verify '%s'" % commit):
             raise YapError("Not a valid commit: %s" % commit)
 
-        repo = get_output('git rev-parse --git-dir')[0]
-        dotest = os.path.join(repo, '.dotest')
-        if os.access(dotest, os.R_OK):
-            raise YapError("A git operation is in progress.  Complete it first")
-        dotest = os.path.join(repo, '..', '.dotest')
-        if os.access(dotest, os.R_OK):
-            raise YapError("A git operation is in progress.  Complete it first")
+        self._check_rebasing()
 
         if subcmd == "amend":
             self._check_commit(**flags)
