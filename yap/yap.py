@@ -237,6 +237,14 @@ class Yap(object):
         if os.access(dotest, os.R_OK):
             raise YapError("A git operation is in progress.  Complete it first")
 
+    def _list_remotes(self):
+        remotes = get_output("git config --get-regexp 'remote.*.url'")
+        for x in remotes:
+            remote, url = x.split(' ')
+            remote = remote.replace('remote.', '')
+            remote = remote.replace('.url', '')
+            yield remote, url
+
     def cmd_clone(self, url, directory=""):
         "<url> [directory]"
         # XXX: implement in terms of init + remote add + fetch
@@ -506,6 +514,27 @@ To skip the problematic patch, run \"yap history skip\"."""
             os.system("git revert '%s'" % commit)
         else:
             os.system("git cherry-pick '%s'" % commit)
+
+    @takes_options("d:")
+    def cmd_repo(self, name=None, url=None, **flags):
+        "[<name> <url> | -d <name>]"
+        if name is not None and url is None:
+            raise TypeError
+
+        if '-d' in flags:
+            if flags['-d'] not in self._list_remotes():
+                raise YapError("No such repository: %s" % flags['-d'])
+            os.system("git config --unset remote.%s.url" % flags['-d'])
+            os.system("git config --unset remote.%s.fetch" % flags['-d'])
+
+        if name:
+            if flags['-d'] in self._list_remotes():
+                raise YapError("Repository '%s' already exists" % flags['-d'])
+            os.system("git config remote.%s.url %s" % (name, url))
+            os.system("git config remote.%s.fetch +refs/heads/*:refs/remotes/%s/*" % (name, url))
+
+        for remote, url in self._list_remotes():
+            print "%s:\t\t%s" % (remote, url)
 
     def cmd_usage(self):
         print >> sys.stderr, "usage: %s <command>" % sys.argv[0]

@@ -11,6 +11,9 @@
         * Better SVN workflows
             * Bring metadata / config over in clone?
             * Keep metadata out of commit message?
+        * Plugin system?
+            * Register new commands
+            * Modify existing commands?  Pre/Post-hooks?
 
 TODO:
     * Commands
@@ -18,8 +21,6 @@ TODO:
         * fetch
         * merge
         * resolved
-        * remote (list/create)
-            * -d to remove
     * Better commit template message
     * Fixups for running outside root?
     * Handle unmerged files in status
