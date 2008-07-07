@@ -28,6 +28,18 @@ def takes_options(options):
         return func
     return decorator
 
+def short_help(help_msg):
+    def decorator(func):
+        func.short_help = help_msg
+        return func
+    return decorator
+
+def long_help(help_msg):
+    def decorator(func):
+        func.long_help = help_msg
+        return func
+    return decorator
+
 class Yap(object):
     def _add_new_file(self, file):
         repo = get_output('git rev-parse --git-dir')[0]
@@ -245,14 +257,17 @@ class Yap(object):
             remote = remote.replace('.url', '')
             yield remote, url
 
+    @short_help("make a local copy of an existing repository")
     def cmd_clone(self, url, directory=""):
         "<url> [directory]"
         # XXX: implement in terms of init + remote add + fetch
         os.system("git clone '%s' %s" % (url, directory))
 
+    @short_help("turn a directory into a repository")
     def cmd_init(self):
         os.system("git init")
 
+    @short_help("add a new file to the repository")
     def cmd_add(self, *files):
         "<file>..."
         if not files:
@@ -262,6 +277,7 @@ class Yap(object):
             self._add_one(f)
         self.cmd_status()
 
+    @short_help("delete a file from the repository")
     def cmd_rm(self, *files):
         "<file>..."
         if not files:
@@ -271,6 +287,7 @@ class Yap(object):
             self._rm_one(f)
         self.cmd_status()
 
+    @short_help("stage changes in a file for commit")
     def cmd_stage(self, *files):
         "<file>..."
         if not files:
@@ -280,6 +297,7 @@ class Yap(object):
             self._stage_one(f)
         self.cmd_status()
 
+    @short_help("unstage changes in a file")
     def cmd_unstage(self, *files):
         "<file>..."
         if not files:
@@ -289,6 +307,7 @@ class Yap(object):
             self._unstage_one(f)
         self.cmd_status()
 
+    @short_help("show files with staged and unstaged changes")
     def cmd_status(self):
         branch = get_output("git symbolic-ref HEAD")[0]
         branch = branch.replace('refs/heads/', '')
@@ -311,6 +330,7 @@ class Yap(object):
         if not files:
             print "\t(none)"
 
+    @short_help("remove uncommitted changes from a file (*)")
     @takes_options("a")
     def cmd_revert(self, *files, **flags):
         "(-a | <file>)"
@@ -325,6 +345,7 @@ class Yap(object):
             self._revert_one(f)
         self.cmd_status()
 
+    @short_help("record changes to files as a new commit")
     @takes_options("ad")
     def cmd_commit(self, **flags):
         self._check_rebasing()
@@ -332,6 +353,7 @@ class Yap(object):
         self._do_commit()
         self.cmd_status()
 
+    @short_help("reverse the actions of the last commit")
     def cmd_uncommit(self):
         self._do_uncommit()
         self.cmd_status()
@@ -339,6 +361,7 @@ class Yap(object):
     def cmd_version(self):
         print "Yap version 0.1"
 
+    @short_help("show the changelog for particular versions or files")
     @takes_options("r:")
     def cmd_log(self, *paths, **flags):
         "[-r <rev>] <path>..."
@@ -346,6 +369,7 @@ class Yap(object):
         paths = ' '.join(paths)
         os.system("git log --name-status '%s' -- %s" % (rev, paths))
 
+    @short_help("show staged, unstaged, or all uncommitted changes")
     @takes_options("ud")
     def cmd_diff(self, **flags):
         "[ -u | -d ]"
@@ -362,6 +386,7 @@ class Yap(object):
         else:
             os.system("git diff-index -p HEAD | %s" % pager)
 
+    @short_help("list, create, or delete branches")
     @takes_options("fd:")
     def cmd_branch(self, branch=None, **flags):
         "[ [-f] -d <branch> | <branch> ]"
@@ -387,6 +412,7 @@ class Yap(object):
             b = b.replace('refs/heads/', '')
             print b
 
+    @short_help("change the current working branch")
     def cmd_switch(self, branch):
         "<branch>"
         ref = get_output("git rev-parse 'refs/heads/%s'" % branch)
@@ -402,6 +428,7 @@ class Yap(object):
         os.system("git checkout-index -f -a")
         self.cmd_branch()
 
+    @short_help("move the current branch to a different revision")
     @takes_options("f")
     def cmd_point(self, where, **flags):
         "<where>"
@@ -433,6 +460,7 @@ class Yap(object):
         os.system("git checkout-index -f -a")
         os.system("git update-index --refresh")
 
+    @short_help("alter history by dropping or amending commits")
     def cmd_history(self, subcmd, *args):
         "amend | drop <commit>"
 
@@ -503,10 +531,12 @@ To skip the problematic patch, run \"yap history skip\"."""
             os.unlink(tmpfile)
         self.cmd_status()
 
+    @short_help("show the changes introduced by a given commit")
     def cmd_show(self, commit="HEAD"):
         "[commit]"
         os.system("git show '%s'" % commit)
 
+    @short_help("apply the changes in a given commit to the current branch")
     @takes_options("r")
     def cmd_cherry_pick(self, commit, **flags):
         "[-r] <commit>"
@@ -515,6 +545,7 @@ To skip the problematic patch, run \"yap history skip\"."""
         else:
             os.system("git cherry-pick '%s'" % commit)
 
+    @short_help("list, add, or delete configured remote repositories")
     @takes_options("d:")
     def cmd_repo(self, name=None, url=None, **flags):
         "[<name> <url> | -d <name>]"
@@ -536,9 +567,30 @@ To skip the problematic patch, run \"yap history skip\"."""
         for remote, url in self._list_remotes():
             print "%s:\t\t%s" % (remote, url)
 
+    def cmd_help(self):
+        print >> sys.stderr, "Yet Another (Git) Porcelein"
+        print >> sys.stderr
+
+        for name in dir(self):
+            if not name.startswith('cmd_'):
+                continue
+            attr = self.__getattribute__(name)
+            if not callable(attr):
+                continue
+            try:
+                short_msg = attr.short_help
+            except AttributeError:
+                continue
+
+            name = name.replace('cmd_', '')
+            name = name.replace('_', '-')
+            print >> sys.stderr, "%-16s%s" % (name, short_msg)
+            print >> sys.stderr
+            print >> sys.stderr, "(*) Indicates that the command is not readily reversible"
+
     def cmd_usage(self):
         print >> sys.stderr, "usage: %s <command>" % sys.argv[0]
-        print >> sys.stderr, "  valid commands: init add rm stage unstage status revert commit uncommit log show diff branch switch point cherry-pick history version"
+        print >> sys.stderr, "  valid commands: help init add rm stage unstage status revert commit uncommit log show diff branch switch point cherry-pick history version"
 
     def main(self, args):
         if len(args) < 1:
