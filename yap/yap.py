@@ -331,10 +331,17 @@ files will show as "staged changes" in the output of 'status'.
     @short_help("unstage changes in a file")
     @long_help("""
 The arguments are the files to be unstaged.  Once unstaged, the files
-will show as "unstaged changes" in the output of 'status'.
+will show as "unstaged changes" in the output of 'status'.  The '-a'
+flag can be used to unstage all staged changes at once.
 """)
-    def cmd_unstage(self, *files):
-        "<file>..."
+    @takes_options("a")
+    def cmd_unstage(self, *files, **flags):
+        "[-a] | <file>..."
+        if '-a' in flags:
+            os.system("git read-tree HEAD")
+            self.cmd_status()
+            return
+
         if not files:
             raise TypeError
         
