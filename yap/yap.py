@@ -184,9 +184,6 @@ class Yap(object):
             for f in self._get_new_files():
                 self._stage_one(f)
 
-        if not self._get_staged_files():
-            raise YapError("No changes to commit")
-
     def _do_uncommit(self):
         commit = self._parse_commit("HEAD")
         repo = get_output('git rev-parse --git-dir')[0]
@@ -404,6 +401,8 @@ command, see 'uncommit'.
     def cmd_commit(self, **flags):
         self._check_rebasing()
         self._check_commit(**flags)
+        if not self._get_staged_files():
+            raise YapError("No changes to commit")
         self._do_commit()
         self.cmd_status()
 
@@ -623,16 +622,14 @@ To skip the problematic patch, run \"yap history skip\"."""
         stash = get_output("git stash create")
         run_command("git reset --hard")
 
-        if subcmd == "amend" and not stash:
-            raise YapError("Failed to stash; no changes?")
-
         fd, tmpfile = tempfile.mkstemp("yap")
         os.close(fd)
         try:
             os.system("git format-patch -k --stdout '%s' > %s" % (commit, tmpfile))
             if subcmd == "amend":
                 self.cmd_point(commit, **{'-f': True})
-                run_command("git stash apply --index %s" % stash[0])
+		if stash:
+		    run_command("git stash apply --index %s" % stash[0])
                 self._do_uncommit()
                 self._do_commit()
                 stash = get_output("git stash create")
