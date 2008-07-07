@@ -451,7 +451,6 @@ shown.  The '-d' flag causes only staged changes to be shown.
 
         pager = self._get_pager_cmd()
 
-        os.system("git update-index -q --refresh")
         if '-u' in flags:
             os.system("git diff-files -p | %s" % pager)
         elif '-d' in flags:
@@ -560,8 +559,7 @@ operation in spite of this.
                 raise YapError("Pointing there will lose commits.  Use -f to force")
 
         os.system("git read-tree HEAD")
-        os.system("git checkout-index -f -a")
-        os.system("git update-index --refresh")
+        os.system("git checkout-index -u -f -a")
 
     @short_help("alter history by dropping or amending commits")
     @long_help("""
