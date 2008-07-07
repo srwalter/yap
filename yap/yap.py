@@ -150,6 +150,7 @@ class Yap(object):
 
     def _revert_one(self, file):
         self._assert_file_exists(file)
+        self._unstage_one(file)
         os.system("git checkout-index -f '%s'" % file)
 
     def _parse_commit(self, commit):
@@ -381,6 +382,7 @@ editing each file again.
     def cmd_revert(self, *files, **flags):
         "(-a | <file>)"
         if '-a' in flags:
+            os.system("git read-tree HEAD")
             os.system("git checkout-index -f -a")
             return
 
