@@ -258,16 +258,33 @@ class Yap(object):
             yield remote, url
 
     @short_help("make a local copy of an existing repository")
+    @long_help("""
+The first argument is a URL to the existing repository.  This can be an
+absolute path if the repository is local, or a URL with the git://,
+ssh://, or http:// schemes.  By default, the directory used is the last
+component of the URL, sans '.git'.  This can be overridden by providing
+a second argument.
+""")
     def cmd_clone(self, url, directory=""):
         "<url> [directory]"
         # XXX: implement in terms of init + remote add + fetch
         os.system("git clone '%s' %s" % (url, directory))
 
     @short_help("turn a directory into a repository")
+    @long_help("""
+Converts the current working directory into a repository.  The primary
+side-effect of this command is the creation of a '.git' subdirectory.
+No files are added nor commits made.
+""")
     def cmd_init(self):
         os.system("git init")
 
     @short_help("add a new file to the repository")
+    @long_help("""
+The arguments are the files to be added to the repository.  Once added,
+the files will show as "unstaged changes" in the output of 'status'.  To
+reverse the effects of this command, see 'rm'.
+""")
     def cmd_add(self, *files):
         "<file>..."
         if not files:
@@ -278,6 +295,12 @@ class Yap(object):
         self.cmd_status()
 
     @short_help("delete a file from the repository")
+    @long_help("""
+The arguments are the files to be removed from the current revision of
+the repository.  The files will still exist in any past commits that the
+file may have been a part of.  The file is not actually deleted, it is
+just no longer tracked as part of the repository.
+""")
     def cmd_rm(self, *files):
         "<file>..."
         if not files:
@@ -288,6 +311,13 @@ class Yap(object):
         self.cmd_status()
 
     @short_help("stage changes in a file for commit")
+    @long_help("""
+The arguments are the files to be staged.  Staging changes is a way to
+build up a commit when you do not want to commit all changes at once.
+To commit only staged changes, use the '-d' flag to 'commit.'  To
+reverse the effects of this command, see 'unstage'.  Once staged, the
+files will show as "staged changes" in the output of 'status'.
+""")
     def cmd_stage(self, *files):
         "<file>..."
         if not files:
@@ -298,6 +328,10 @@ class Yap(object):
         self.cmd_status()
 
     @short_help("unstage changes in a file")
+    @long_help("""
+The arguments are the files to be unstaged.  Once unstaged, the files
+will show as "unstaged changes" in the output of 'status'.
+""")
     def cmd_unstage(self, *files):
         "<file>..."
         if not files:
@@ -308,6 +342,12 @@ class Yap(object):
         self.cmd_status()
 
     @short_help("show files with staged and unstaged changes")
+    @long_help("""
+Show the files in the repository with changes since the last commit,
+categorized based on whether the changes are staged or not.  A file may
+appear under each heading if the same file has both staged and unstaged
+changes.
+""")
     def cmd_status(self):
         branch = get_output("git symbolic-ref HEAD")[0]
         branch = branch.replace('refs/heads/', '')
@@ -331,6 +371,12 @@ class Yap(object):
             print "\t(none)"
 
     @short_help("remove uncommitted changes from a file (*)")
+    @long_help("""
+The arguments are the files whose changes will be reverted.  If the '-a'
+flag is given, then all files will have uncommitted changes removed.
+Note that there is no way to reverse this command short of manually
+editing each file again.
+""")
     @takes_options("a")
     def cmd_revert(self, *files, **flags):
         "(-a | <file>)"
@@ -346,6 +392,14 @@ class Yap(object):
         self.cmd_status()
 
     @short_help("record changes to files as a new commit")
+    @long_help("""
+Create a new commit recording changes since the last commit.  If there
+are only unstaged changes, those will be recorded.  If there are only
+staged changes, those will be recorder.  Otherwise, you will have to
+specify either the '-a' flag or the '-d' flag to commit all changes or
+only staged changes, respectively.  To reverse the effects of this
+command, see 'uncommit'.
+""")
     @takes_options("ad")
     def cmd_commit(self, **flags):
         self._check_rebasing()
@@ -354,14 +408,29 @@ class Yap(object):
         self.cmd_status()
 
     @short_help("reverse the actions of the last commit")
+    @long_help("""
+Reverse the effects of the last 'commit' operation.  The changes that
+were part of the previous commit will show as "staged changes" in the
+output of 'status'.  This means that if no files were changed since the
+last commit was created, 'uncommit' followed by 'commit' is a lossless
+operation.
+""")
     def cmd_uncommit(self):
         self._do_uncommit()
         self.cmd_status()
 
+    @short_help("report the current version of yap")
     def cmd_version(self):
         print "Yap version 0.1"
 
     @short_help("show the changelog for particular versions or files")
+    @long_help("""
+The arguments are the files with which to filter history.  If none are
+given, all changes are listed.  Otherwise only commits that affected one
+or more of the given files are listed.  The -r option changes the
+starting revision for traversing history.  By default, history is listed
+starting at HEAD.
+""")
     @takes_options("r:")
     def cmd_log(self, *paths, **flags):
         "[-r <rev>] <path>..."
@@ -370,6 +439,11 @@ class Yap(object):
         os.system("git log --name-status '%s' -- %s" % (rev, paths))
 
     @short_help("show staged, unstaged, or all uncommitted changes")
+    @long_help("""
+Show staged, unstaged, or all uncommitted changes.  By default, all
+changes are shown.  The '-u' flag causes only unstaged changes to be
+shown.  The '-d' flag causes only staged changes to be shown.
+""")
     @takes_options("ud")
     def cmd_diff(self, **flags):
         "[ -u | -d ]"
@@ -387,6 +461,21 @@ class Yap(object):
             os.system("git diff-index -p HEAD | %s" % pager)
 
     @short_help("list, create, or delete branches")
+    @long_help("""
+If no arguments are given, a list of local branches is given.  The
+current branch is indicated by a "*" next to the name.  If an argument
+is given, it is taken as the name of a new branch to create.  The branch
+will start pointing at the current HEAD.  See 'point' for details on
+changing the revision of the new branch.  Note that this command does
+not switch the current working branch.  See 'switch' for details on
+changing the current working branch.
+
+The '-d' flag can be used to delete local branches.  If the delete
+operation would remove the last branch reference to a given line of
+history (colloquially referred to as "dangling commits"), yap will
+report an error and abort.  The '-f' flag can be used to force the delete
+in spite of this.
+""")
     @takes_options("fd:")
     def cmd_branch(self, branch=None, **flags):
         "[ [-f] -d <branch> | <branch> ]"
@@ -413,6 +502,14 @@ class Yap(object):
             print b
 
     @short_help("change the current working branch")
+    @long_help("""
+The argument is the name of the branch to make the current working
+branch.  This command will fail if there are uncommitted changes to any
+files.  Otherwise, the contents of the files in the working directory
+are updated to reflect their state in the new branch.  Additionally, any
+future commits are added to the new branch instead of the previous line
+of history.
+""")
     def cmd_switch(self, branch):
         "<branch>"
         ref = get_output("git rev-parse 'refs/heads/%s'" % branch)
@@ -429,6 +526,13 @@ class Yap(object):
         self.cmd_branch()
 
     @short_help("move the current branch to a different revision")
+    @long_help("""
+The argument is the hash of the commit to which the current branch
+should point, or alternately a branch or tag (a.k.a, "committish").  If
+moving the branch would create "dangling commits" (see 'branch'), yap
+will report an error and abort.  The '-f' flag can be used to force the
+operation in spite of this.
+""")
     @takes_options("f")
     def cmd_point(self, where, **flags):
         "<where>"
@@ -461,6 +565,24 @@ class Yap(object):
         os.system("git update-index --refresh")
 
     @short_help("alter history by dropping or amending commits")
+    @long_help("""
+This command operates in two distinct modes, "amend" and "drop" mode.
+In drop mode, the given commit is removed from the history of the
+current branch, as though that commit never happened.  By default the
+commit used is HEAD.
+
+In amend mode, the uncommitted changes present are merged into a
+previous commit.  This is useful for correcting typos or adding missed
+files into past commits.  By default the commit used is HEAD.
+
+While rewriting history it is possible that conflicts will arise.  If
+this happens, the rewrite will pause and you will be prompted to resolve
+the conflicts and staged them.  Once that is done, you will run "yap
+history continue."  If instead you want the conflicting commit removed
+from history (perhaps your changes supercede that commit) you can run
+"yap history skip".  Once the rewrite completes, your branch will be on
+the same commit as when the rewrite started.
+""")
     def cmd_history(self, subcmd, *args):
         "amend | drop <commit>"
 
@@ -472,11 +594,11 @@ When you have resolved the conflicts run \"yap history continue\".
 To skip the problematic patch, run \"yap history skip\"."""
 
         if subcmd == "continue":
-            os.system("git am -r --resolvemsg='%s'" % resolvemsg)
+            os.system("git am -3 -r --resolvemsg='%s'" % resolvemsg)
             return
         if subcmd == "skip":
             os.system("git reset --hard")
-            os.system("git am --skip --resolvemsg='%s'" % resolvemsg)
+            os.system("git am -3 --skip --resolvemsg='%s'" % resolvemsg)
             return
 
         if subcmd == "amend":
@@ -532,11 +654,24 @@ To skip the problematic patch, run \"yap history skip\"."""
         self.cmd_status()
 
     @short_help("show the changes introduced by a given commit")
+    @long_help("""
+By default, the changes in the last commit are shown.  To override this,
+specify a hash, branch, or tag (committish).  The hash of the commit,
+the commit's author, log message, and a diff of the changes are shown.
+""")
     def cmd_show(self, commit="HEAD"):
         "[commit]"
         os.system("git show '%s'" % commit)
 
     @short_help("apply the changes in a given commit to the current branch")
+    @long_help("""
+The argument is the hash, branch, or tag (committish) of the commit to
+be applied.  In general, it only makes sense to apply commits that
+happened on another branch.  The '-r' flag can be used to have the
+changes in the given commit reversed from the current branch.  In
+general, this only makes sense for commits that happened on the current
+branch.
+""")
     @takes_options("r")
     def cmd_cherry_pick(self, commit, **flags):
         "[-r] <commit>"
@@ -546,6 +681,13 @@ To skip the problematic patch, run \"yap history skip\"."""
             os.system("git cherry-pick '%s'" % commit)
 
     @short_help("list, add, or delete configured remote repositories")
+    @long_help("""
+When invoked with no arguments, this command will show the list of
+currently configured remote repositories, giving both the name and URL
+of each.  To add a new repository, give the desired name as the first
+argument and the URL as the second.  The '-d' flag can be used to remove
+a previously added repository.
+""")
     @takes_options("d:")
     def cmd_repo(self, name=None, url=None, **flags):
         "[<name> <url> | -d <name>]"
@@ -567,7 +709,22 @@ To skip the problematic patch, run \"yap history skip\"."""
         for remote, url in self._list_remotes():
             print "%s:\t\t%s" % (remote, url)
 
-    def cmd_help(self):
+    def cmd_help(self, cmd=None):
+        if cmd is not None:
+            try:
+                attr = self.__getattribute__("cmd_"+cmd)
+            except AttributeError:
+                raise YapError("No such command: %s" % cmd)
+            try:
+                help = attr.long_help
+            except AttributeError:
+                raise YapError("Sorry, no help for '%s'.  Ask Steven." % cmd)
+
+            print >>sys.stderr, "The '%s' command" % cmd
+            print >>sys.stderr, "\tyap %s %s" % (cmd, attr.__doc__)
+            print >>sys.stderr, "%s" % help
+            return
+
         print >> sys.stderr, "Yet Another (Git) Porcelein"
         print >> sys.stderr
 

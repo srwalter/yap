@@ -24,6 +24,4 @@ TODO:
     * Better commit template message
     * Fixups for running outside root?
     * Handle unmerged files in status
-    * Documentation system
-        * Short blurb + Long blurb
-        * "yap help" and "yap help cmd"
+    * commit -t for temporary commit
