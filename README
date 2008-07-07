@@ -14,6 +14,22 @@
         * Plugin system?
             * Register new commands
             * Modify existing commands?  Pre/Post-hooks?
+            * 3 options
+                * plugin provides override for certain commands
+                    * only one plugin can override
+                * plugins can register pre/post-hooks for commands
+        * Plugin ideas
+            * svn
+                * override push/fetch
+            * mls
+                * override clone
+                * add post-fetch for daily/bdaily revs
+            * track published history
+                * pre-hook for history (point?)
+            * backup (foo~) on revert
+                * pre-revert hook
+            * commit -t
+                * override commit
 
 TODO:
     * Commands
