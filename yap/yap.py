@@ -15,6 +15,19 @@ def run_command(cmd):
     rc >>= 8
     return rc
 
+class ShellError(Exception):
+    def __init__(self, cmd, rc):
+	self.cmd = cmd
+	self.rc = rc
+
+    def __str__(self):
+	return "%s returned %d" % (self.cmd, self.rc)
+
+def run_safely(cmd):
+    rc = run_command(cmd)
+    if rc:
+	raise ShellError(cmd, rc)
+
 class YapError(Exception):
     def __init__(self, msg):
         self.msg = msg
@@ -107,12 +120,12 @@ class Yap(object):
         ref = get_output("git rev-parse 'refs/heads/%s'" % branch)
         if not ref:
             raise YapError("No such branch: %s" % branch)
-        os.system("git update-ref -d 'refs/heads/%s' '%s'" % (branch, ref[0]))
+        run_safely("git update-ref -d 'refs/heads/%s' '%s'" % (branch, ref[0]))
 
         if not force:
             name = get_output("git name-rev --name-only '%s'" % ref[0])[0]
             if name == 'undefined':
-                os.system("git update-ref 'refs/heads/%s' '%s'" % (branch, ref[0]))
+                run_command("git update-ref 'refs/heads/%s' '%s'" % (branch, ref[0]))
                 raise YapError("Refusing to delete leaf branch (use -f to force)")
     def _get_pager_cmd(self):
         if 'YAP_PAGER' in os.environ:
@@ -134,24 +147,24 @@ class Yap(object):
     def _rm_one(self, file):
         self._assert_file_exists(file)
         if get_output("git ls-files '%s'" % file) != []:
-            os.system("git rm --cached '%s'" % file)
+            run_safely("git rm --cached '%s'" % file)
         self._remove_new_file(file)
 
     def _stage_one(self, file):
         self._assert_file_exists(file)
-        os.system("git update-index --add '%s'" % file)
+        run_safely("git update-index --add '%s'" % file)
 
     def _unstage_one(self, file):
         self._assert_file_exists(file)
         if run_command("git rev-parse HEAD"):
-            os.system("git update-index --force-remove '%s'" % file)
+            run_safely("git update-index --force-remove '%s'" % file)
         else:
-            os.system("git diff-index -p HEAD '%s' | git apply -R --cached" % file)
+            run_safely("git diff-index -p HEAD '%s' | git apply -R --cached" % file)
 
     def _revert_one(self, file):
         self._assert_file_exists(file)
         self._unstage_one(file)
-        os.system("git checkout-index -u -f '%s'" % file)
+        run_safely("git checkout-index -u -f '%s'" % file)
 
     def _parse_commit(self, commit):
         lines = get_output("git cat-file commit '%s'" % commit)
@@ -181,7 +194,7 @@ class Yap(object):
         if '-d' not in flags and self._get_unstaged_files():
             if '-a' not in flags and self._get_staged_files():
                 raise YapError("Staged and unstaged changes present.  Specify what to commit")
-            os.system("git diff-files -p | git apply --cached 2>/dev/null")
+            run_safely("git diff-files -p | git apply --cached")
             for f in self._get_new_files():
                 self._stage_one(f)
 
@@ -199,7 +212,7 @@ class Yap(object):
         fd.close()
 
         tree = get_output("git rev-parse HEAD^")
-        os.system("git update-ref -m uncommit HEAD '%s'" % tree[0])
+        run_safely("git update-ref -m uncommit HEAD '%s'" % tree[0])
 
     def _do_commit(self):
         tree = get_output("git write-tree")[0]
@@ -236,7 +249,7 @@ class Yap(object):
         if not commit:
             raise YapError("Commit failed; no log message?")
         os.unlink(tmpfile)
-        os.system("git update-ref HEAD '%s'" % commit[0])
+        run_safely("git update-ref HEAD '%s'" % commit[0])
 
     def _check_rebasing(self):
         repo = get_output('git rev-parse --git-dir')[0]
@@ -335,7 +348,7 @@ flag can be used to unstage all staged changes at once.
     def cmd_unstage(self, *files, **flags):
         "[-a] | <file>..."
         if '-a' in flags:
-            os.system("git read-tree -m HEAD")
+            run_safely("git read-tree -m HEAD")
             self.cmd_status()
             return
 
@@ -386,8 +399,8 @@ editing each file again.
     def cmd_revert(self, *files, **flags):
         "(-a | <file>)"
         if '-a' in flags:
-            os.system("git read-tree -m HEAD")
-            os.system("git checkout-index -u -f -a")
+            run_safely("git read-tree -m HEAD")
+            run_safely("git checkout-index -u -f -a")
 	    self.cmd_status()
             return
 
@@ -497,7 +510,7 @@ in spite of this.
             ref = get_output("git rev-parse HEAD")
             if not ref:
                 raise YapError("No branch point yet.  Make a commit")
-            os.system("git update-ref 'refs/heads/%s' '%s'" % (branch, ref[0]))
+            run_safely("git update-ref 'refs/heads/%s' '%s'" % (branch, ref[0]))
 
         current = get_output("git symbolic-ref HEAD")[0]
         branches = get_output("git for-each-ref --format='%(refname)' 'refs/heads/*'")
@@ -528,9 +541,9 @@ of history.
         if self._get_unstaged_files() or self._get_staged_files():
             raise YapError("You have uncommitted changes.  Commit them first")
 
-        os.system("git symbolic-ref HEAD refs/heads/'%s'" % branch)
-        os.system("git read-tree -m HEAD")
-        os.system("git checkout-index -u -f -a")
+        run_safely("git symbolic-ref HEAD refs/heads/'%s'" % branch)
+        run_safely("git read-tree -m HEAD")
+        run_safely("git checkout-index -u -f -a")
         self.cmd_branch()
 
     @short_help("move the current branch to a different revision")
@@ -560,7 +573,7 @@ operation in spite of this.
             tag = get_output("git cat-file tag '%s'" % ref[0])
             ref[0] = tag[0].split(' ')[1]
 
-        os.system("git update-ref HEAD '%s'" % ref[0])
+        run_safely("git update-ref HEAD '%s'" % ref[0])
 
         if '-f' not in flags:
             name = get_output("git name-rev --name-only '%s'" % head[0])[0]
@@ -568,8 +581,8 @@ operation in spite of this.
                 os.system("git update-ref HEAD '%s'" % head[0])
                 raise YapError("Pointing there will lose commits.  Use -f to force")
 
-        os.system("git read-tree -m HEAD")
-        os.system("git checkout-index -u -f -a")
+        run_safely("git read-tree -m HEAD")
+        run_safely("git checkout-index -u -f -a")
 
     @short_help("alter history by dropping or amending commits")
     @long_help("""
@@ -633,7 +646,7 @@ To skip the problematic patch, run \"yap history skip\"."""
         fd, tmpfile = tempfile.mkstemp("yap")
         os.close(fd)
         try:
-            os.system("git format-patch -k --stdout '%s' > %s" % (commit, tmpfile))
+            run_safely("git format-patch -k --stdout '%s' > %s" % (commit, tmpfile))
             if subcmd == "amend":
                 self.cmd_point(commit, **{'-f': True})
 		if stash:
