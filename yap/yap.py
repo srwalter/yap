@@ -117,7 +117,7 @@ class Yap(object):
         if branch == current:
             raise YapError("Can't delete current branch")
 
-        ref = get_output("git rev-parse 'refs/heads/%s'" % branch)
+        ref = get_output("git rev-parse --verify 'refs/heads/%s'" % branch)
         if not ref:
             raise YapError("No such branch: %s" % branch)
         run_safely("git update-ref -d 'refs/heads/%s' '%s'" % (branch, ref[0]))
@@ -211,12 +211,12 @@ class Yap(object):
         print >>fd, commit['log']
         fd.close()
 
-        tree = get_output("git rev-parse HEAD^")
+        tree = get_output("git rev-parse --verify HEAD^")
         run_safely("git update-ref -m uncommit HEAD '%s'" % tree[0])
 
     def _do_commit(self):
         tree = get_output("git write-tree")[0]
-        parent = get_output("git rev-parse HEAD 2> /dev/null")[0]
+        parent = get_output("git rev-parse --verify HEAD 2> /dev/null")[0]
 
         if os.environ.has_key('YAP_EDITOR'):
             editor = os.environ['YAP_EDITOR']
@@ -507,7 +507,7 @@ in spite of this.
             return
 
         if branch is not None:
-            ref = get_output("git rev-parse HEAD")
+            ref = get_output("git rev-parse --verify HEAD")
             if not ref:
                 raise YapError("No branch point yet.  Make a commit")
             run_safely("git update-ref 'refs/heads/%s' '%s'" % (branch, ref[0]))
@@ -533,7 +533,7 @@ of history.
 """)
     def cmd_switch(self, branch):
         "<branch>"
-        ref = get_output("git rev-parse 'refs/heads/%s'" % branch)
+        ref = get_output("git rev-parse --verify 'refs/heads/%s'" % branch)
         if not ref:
             raise YapError("No such branch: %s" % branch)
 
@@ -557,11 +557,11 @@ operation in spite of this.
     @takes_options("f")
     def cmd_point(self, where, **flags):
         "<where>"
-        head = get_output("git rev-parse HEAD")
+        head = get_output("git rev-parse --verify HEAD")
         if not head:
             raise YapError("No commit yet; nowhere to point")
 
-        ref = get_output("git rev-parse '%s'" % where)
+        ref = get_output("git rev-parse --verify '%s'" % where)
         if not ref:
             raise YapError("Not a valid ref: %s" % where)
 
