@@ -1,0 +1,2 @@
+class YapPlugin(object):
+    pass

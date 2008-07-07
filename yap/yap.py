@@ -1,8 +1,11 @@
 import sys
 import os
+import glob
 import getopt
 import pickle
 import tempfile
+
+from plugin import YapPlugin
 
 def get_output(cmd):
     fd = os.popen(cmd)
@@ -41,6 +44,23 @@ def long_help(help_msg):
     return decorator
 
 class Yap(object):
+    def __init__(self):
+        self.plugins = set()
+        plugindir = os.path.expanduser("~/.yap/plugins")
+        for p in glob.glob(os.path.join(plugindir, "*.py")):
+            glbls = {}
+            execfile(p, glbls)
+            for cls in glbls.values():
+                if not type(cls) == type:
+                    continue
+                if not issubclass(cls, YapPlugin):
+                    continue
+                if cls is YapPlugin:
+                    continue
+                x = cls(self)
+                # XXX: check for override overlap
+                self.plugins.add(x)
+
     def _add_new_file(self, file):
         repo = get_output('git rev-parse --git-dir')[0]
         dir = os.path.join(repo, 'yap')
