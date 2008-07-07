@@ -388,6 +388,7 @@ editing each file again.
         if '-a' in flags:
             os.system("git read-tree -m HEAD")
             os.system("git checkout-index -u -f -a")
+	    self.cmd_status()
             return
 
         if not files:
