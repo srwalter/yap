@@ -151,7 +151,7 @@ class Yap(object):
     def _revert_one(self, file):
         self._assert_file_exists(file)
         self._unstage_one(file)
-        os.system("git checkout-index -f '%s'" % file)
+        os.system("git checkout-index -u -f '%s'" % file)
 
     def _parse_commit(self, commit):
         lines = get_output("git cat-file commit '%s'" % commit)
@@ -335,7 +335,7 @@ flag can be used to unstage all staged changes at once.
     def cmd_unstage(self, *files, **flags):
         "[-a] | <file>..."
         if '-a' in flags:
-            os.system("git read-tree HEAD")
+            os.system("git read-tree -m HEAD")
             self.cmd_status()
             return
 
@@ -386,8 +386,8 @@ editing each file again.
     def cmd_revert(self, *files, **flags):
         "(-a | <file>)"
         if '-a' in flags:
-            os.system("git read-tree HEAD")
-            os.system("git checkout-index -f -a")
+            os.system("git read-tree -m HEAD")
+            os.system("git checkout-index -u -f -a")
             return
 
         if not files:
@@ -528,8 +528,8 @@ of history.
             raise YapError("You have uncommitted changes.  Commit them first")
 
         os.system("git symbolic-ref HEAD refs/heads/'%s'" % branch)
-        os.system("git read-tree HEAD")
-        os.system("git checkout-index -f -a")
+        os.system("git read-tree -m HEAD")
+        os.system("git checkout-index -u -f -a")
         self.cmd_branch()
 
     @short_help("move the current branch to a different revision")
@@ -567,7 +567,7 @@ operation in spite of this.
                 os.system("git update-ref HEAD '%s'" % head[0])
                 raise YapError("Pointing there will lose commits.  Use -f to force")
 
-        os.system("git read-tree HEAD")
+        os.system("git read-tree -m HEAD")
         os.system("git checkout-index -u -f -a")
 
     @short_help("alter history by dropping or amending commits")
