@@ -224,7 +224,7 @@ class Yap(object):
         tree = get_output("git rev-parse HEAD^")
         os.system("git update-ref -m uncommit HEAD '%s'" % tree[0])
 
-    def _do_commit(self):
+    def _do_commit(self, msg=None):
         tree = get_output("git write-tree")[0]
         parent = get_output("git rev-parse HEAD 2> /dev/null")[0]
 
@@ -250,7 +250,11 @@ class Yap(object):
             fd2.close()
             os.unlink(msg_file)
 
-        if os.system("%s '%s'" % (editor, tmpfile)) != 0:
+        if msg:
+            fd = file(tmpfile, 'w')
+            print >>fd, msg
+            fd.close()
+        elif os.system("%s '%s'" % (editor, tmpfile)) != 0:
             raise YapError("Editing commit message failed")
         if parent != 'HEAD':
             commit = get_output("git commit-tree '%s' -p '%s' < '%s'" % (tree, parent, tmpfile))
@@ -429,11 +433,12 @@ specify either the '-a' flag or the '-d' flag to commit all changes or
 only staged changes, respectively.  To reverse the effects of this
 command, see 'uncommit'.
 """)
-    @takes_options("ad")
+    @takes_options("adm:")
     def cmd_commit(self, **flags):
         self._check_rebasing()
         self._check_commit(**flags)
-        self._do_commit()
+        msg = flags.get('-m', None)
+        self._do_commit(msg)
         self.cmd_status()
 
     @short_help("reverse the actions of the last commit")
