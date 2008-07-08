@@ -722,13 +722,13 @@ a previously added repository.
             raise TypeError
 
         if '-d' in flags:
-            if flags['-d'] not in self._list_remotes():
+            if flags['-d'] not in [ x[0] for x in self._list_remotes() ]:
                 raise YapError("No such repository: %s" % flags['-d'])
             os.system("git config --unset remote.%s.url" % flags['-d'])
             os.system("git config --unset remote.%s.fetch" % flags['-d'])
 
         if name:
-            if flags['-d'] in self._list_remotes():
+            if flags['-d'] in [ x[0] for x in self._list_remotes() ]:
                 raise YapError("Repository '%s' already exists" % flags['-d'])
             os.system("git config remote.%s.url %s" % (name, url))
             os.system("git config remote.%s.fetch +refs/heads/*:refs/remotes/%s/*" % (name, url))
@@ -740,7 +740,7 @@ a previously added repository.
     def cmd_push(self, repo, **flags):
 	"[-c | -d] <repo>"
 
-	if repo not in self._list_remotes():
+	if repo not in [ x[0] for x in self._list_remotes() ]:
 	    raise YapError("No such repository: %s" % repo)
 
         current = get_output("git symbolic-ref HEAD")[0]
@@ -754,7 +754,7 @@ a previously added repository.
 	
 	if '-c' not in flags and '-d' not in flags:
 	    if run_command("git rev-parse --verify refs/remotes/%s/%s"
-		    % (remote, ref.replace('refs/heads/', ''))):
+		    % (remote[0], ref.replace('refs/heads/', ''))):
 		raise YapError("No matching branch on that repo.  Use -c to create a new branch there.")
 	
 	if '-d' in flags:
@@ -767,7 +767,7 @@ a previously added repository.
 
     def cmd_fetch(self, repo):
 	# XXX allow defaulting of repo? yap.default
-	if repo not in self._list_remotes():
+	if repo not in [ x[0] for x in self._list_remotes() ]:
 	    raise YapError("No such repository: %s" % repo)
 	os.system("git fetch %s" % repo)
 
