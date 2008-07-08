@@ -765,6 +765,11 @@ a previously added repository.
 	if rc:
 	    raise YapError("Push failed.")
 
+    def cmd_fetch(self, repo):
+	# XXX allow defaulting of repo? yap.default
+	if repo not in self._list_remotes():
+	    raise YapError("No such repository: %s" % repo)
+	os.system("git fetch %s" % repo)
 
     def cmd_help(self, cmd=None):
         if cmd is not None:
