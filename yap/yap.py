@@ -300,7 +300,7 @@ reverse the effects of this command, see 'rm'.
     @long_help("""
 The arguments are the files to be removed from the current revision of
 the repository.  The files will still exist in any past commits that the
-file may have been a part of.  The file is not actually deleted, it is
+files may have been a part of.  The file is not actually deleted, it is
 just no longer tracked as part of the repository.
 """)
     def cmd_rm(self, *files):
@@ -358,6 +358,7 @@ appear under each heading if the same file has both staged and unstaged
 changes.
 """)
     def cmd_status(self):
+	""
         branch = get_output("git symbolic-ref HEAD")[0]
         branch = branch.replace('refs/heads/', '')
         print "Current branch: %s" % branch
@@ -406,13 +407,14 @@ editing each file again.
     @long_help("""
 Create a new commit recording changes since the last commit.  If there
 are only unstaged changes, those will be recorded.  If there are only
-staged changes, those will be recorder.  Otherwise, you will have to
+staged changes, those will be recorded.  Otherwise, you will have to
 specify either the '-a' flag or the '-d' flag to commit all changes or
 only staged changes, respectively.  To reverse the effects of this
 command, see 'uncommit'.
 """)
     @takes_options("adm:")
     def cmd_commit(self, **flags):
+	"[-a | -d]"
         self._check_rebasing()
         self._check_commit(**flags)
         if not self._get_staged_files():
@@ -430,6 +432,7 @@ last commit was created, 'uncommit' followed by 'commit' is a lossless
 operation.
 """)
     def cmd_uncommit(self):
+	""
         self._do_uncommit()
         self.cmd_status()
 
@@ -475,7 +478,7 @@ shown.  The '-d' flag causes only staged changes to be shown.
 
     @short_help("list, create, or delete branches")
     @long_help("""
-If no arguments are given, a list of local branches is given.  The
+If no arguments are specified, a list of local branches is given.  The
 current branch is indicated by a "*" next to the name.  If an argument
 is given, it is taken as the name of a new branch to create.  The branch
 will start pointing at the current HEAD.  See 'point' for details on
@@ -589,7 +592,7 @@ files into past commits.  By default the commit used is HEAD.
 
 While rewriting history it is possible that conflicts will arise.  If
 this happens, the rewrite will pause and you will be prompted to resolve
-the conflicts and staged them.  Once that is done, you will run "yap
+the conflicts and stage them.  Once that is done, you will run "yap
 history continue."  If instead you want the conflicting commit removed
 from history (perhaps your changes supercede that commit) you can run
 "yap history skip".  Once the rewrite completes, your branch will be on
@@ -742,7 +745,7 @@ a previously added repository.
     def cmd_help(self, cmd=None):
         if cmd is not None:
             try:
-                attr = self.__getattribute__("cmd_"+cmd)
+                attr = self.__getattribute__("cmd_"+cmd.replace('-', '_'))
             except AttributeError:
                 raise YapError("No such command: %s" % cmd)
             try:
@@ -776,8 +779,8 @@ a previously added repository.
 	print >> sys.stderr, "(*) Indicates that the command is not readily reversible"
 
     def cmd_usage(self):
-        print >> sys.stderr, "usage: %s <command>" % sys.argv[0]
-        print >> sys.stderr, "  valid commands: help init add rm stage unstage status revert commit uncommit log show diff branch switch point cherry-pick history version"
+        print >> sys.stderr, "usage: %s <command>" % os.path.basename(sys.argv[0])
+        print >> sys.stderr, "  valid commands: help init clone add rm stage unstage status revert commit uncommit log show diff branch switch point cherry-pick repo history version"
 
     def main(self, args):
         if len(args) < 1:
