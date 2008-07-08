@@ -339,7 +339,11 @@ flag can be used to unstage all staged changes at once.
     def cmd_unstage(self, *files, **flags):
         "[-a] | <file>..."
         if '-a' in flags:
-            run_safely("git read-tree -m HEAD")
+	    try:
+		run_safely("git read-tree -m HEAD")
+	    except ShellError:
+		run_safely("git read-tree HEAD")
+		run_safely("git update-index -q --refresh")
             self.cmd_status()
             return
 
