@@ -16,11 +16,6 @@ class ShellError(Exception):
     def __str__(self):
 	return "%s returned %d" % (self.cmd, self.rc)
 
-def run_safely(cmd):
-    rc = run_command(cmd)
-    if rc:
-	raise ShellError(cmd, rc)
-
 class YapError(Exception):
     def __init__(self, msg):
         self.msg = msg

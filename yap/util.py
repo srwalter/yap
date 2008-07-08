@@ -11,6 +11,11 @@ def run_command(cmd):
     rc >>= 8
     return rc
 
+def run_safely(cmd):
+    rc = run_command(cmd)
+    if rc:
+	raise ShellError(cmd, rc)
+
 def takes_options(options):
     def decorator(func):
         func.options = options
