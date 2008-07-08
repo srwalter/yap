@@ -648,36 +648,42 @@ To skip the problematic patch, run \"yap history skip\"."""
 
         if subcmd == "amend":
             self._check_commit(**flags)
+            if self._get_unstaged_files():
+                # XXX: handle unstaged changes better
+                raise YapError("Commit away changes that you aren't amending")
 
-        stash = get_output("git stash create")
-        run_command("git reset --hard")
-
-        if subcmd == "amend" and not stash:
-            raise YapError("Failed to stash; no changes?")
-
-        fd, tmpfile = tempfile.mkstemp("yap")
-        os.close(fd)
         try:
-            os.system("git format-patch -k --stdout '%s' > %s" % (commit, tmpfile))
-            if subcmd == "amend":
-                self.cmd_point(commit, **{'-f': True})
-                run_command("git stash apply --index %s" % stash[0])
-                self._do_uncommit()
-                self._do_commit()
-                stash = get_output("git stash create")
-                run_command("git reset --hard")
-            else:
-                self.cmd_point("%s^" % commit, **{'-f': True})
+            stash = get_output("git stash create")
+            run_command("git reset --hard")
+            if subcmd == "amend" and not stash:
+                raise YapError("Failed to stash; no changes?")
 
-            stat = os.stat(tmpfile)
-            size = stat[6]
-            if size > 0:
-                rc = os.system("git am -3 --resolvemsg=\'%s\' %s" % (resolvemsg, tmpfile))
-                if (rc):
-                    raise YapError("Failed to apply changes")
+            try:
+                fd, tmpfile = tempfile.mkstemp("yap")
+                os.close(fd)
+                os.system("git format-patch -k --stdout '%s' > %s" % (commit, tmpfile))
+                if subcmd == "amend":
+                    self.cmd_point(commit, **{'-f': True})
+            finally:
+                if subcmd == "amend":
+                    run_command("git stash apply --index %s" % stash[0])
 
-            if stash:
-                run_command("git stash apply %s" % stash[0])
+            try:
+                if subcmd == "amend":
+                    self._do_uncommit()
+                    self._do_commit()
+                else:
+                    self.cmd_point("%s^" % commit, **{'-f': True})
+
+                stat = os.stat(tmpfile)
+                size = stat[6]
+                if size > 0:
+                    rc = os.system("git am -3 --resolvemsg=\'%s\' %s" % (resolvemsg, tmpfile))
+                    if (rc):
+                        raise YapError("Failed to apply changes")
+            finally:
+                if stash:
+                    run_command("git stash apply --index %s" % stash[0])
         finally:
             os.unlink(tmpfile)
         self.cmd_status()
