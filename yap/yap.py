@@ -252,7 +252,7 @@ class Yap(object):
             raise YapError("A git operation is in progress.  Complete it first")
 
     def _list_remotes(self):
-        remotes = get_output("git config --get-regexp 'remote.*.url'")
+        remotes = get_output("git config --get-regexp '^remote.*.url'")
         for x in remotes:
             remote, url = x.split(' ')
             remote = remote.replace('remote.', '')
