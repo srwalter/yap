@@ -1,19 +1,12 @@
 import sys
 import os
+import glob
 import getopt
 import pickle
 import tempfile
 
-def get_output(cmd):
-    fd = os.popen(cmd)
-    output = fd.readlines()
-    rc = fd.close()
-    return [x.strip() for x in output]
-
-def run_command(cmd):
-    rc = os.system("%s > /dev/null 2>&1" % cmd)
-    rc >>= 8
-    return rc
+from plugin import YapPlugin
+from util import *
 
 class ShellError(Exception):
     def __init__(self, cmd, rc):
@@ -35,25 +28,24 @@ class YapError(Exception):
     def __str__(self):
         return self.msg
 
-def takes_options(options):
-    def decorator(func):
-        func.options = options
-        return func
-    return decorator
-
-def short_help(help_msg):
-    def decorator(func):
-        func.short_help = help_msg
-        return func
-    return decorator
-
-def long_help(help_msg):
-    def decorator(func):
-        func.long_help = help_msg
-        return func
-    return decorator
-
 class Yap(object):
+    def __init__(self):
+        self.plugins = set()
+        plugindir = os.path.expanduser("~/.yap/plugins")
+        for p in glob.glob(os.path.join(plugindir, "*.py")):
+            glbls = {}
+            execfile(p, glbls)
+            for cls in glbls.values():
+                if not type(cls) == type:
+                    continue
+                if not issubclass(cls, YapPlugin):
+                    continue
+                if cls is YapPlugin:
+                    continue
+                x = cls(self)
+                # XXX: check for override overlap
+                self.plugins.add(x)
+
     def _add_new_file(self, file):
         repo = get_output('git rev-parse --git-dir')[0]
         dir = os.path.join(repo, 'yap')
@@ -214,7 +206,7 @@ class Yap(object):
         tree = get_output("git rev-parse --verify HEAD^")
         run_safely("git update-ref -m uncommit HEAD '%s'" % tree[0])
 
-    def _do_commit(self):
+    def _do_commit(self, msg=None):
         tree = get_output("git write-tree")[0]
         parent = get_output("git rev-parse --verify HEAD 2> /dev/null")[0]
 
@@ -240,7 +232,11 @@ class Yap(object):
             fd2.close()
             os.unlink(msg_file)
 
-        if os.system("%s '%s'" % (editor, tmpfile)) != 0:
+        if msg:
+            fd = file(tmpfile, 'w')
+            print >>fd, msg
+            fd.close()
+        elif os.system("%s '%s'" % (editor, tmpfile)) != 0:
             raise YapError("Editing commit message failed")
         if parent != 'HEAD':
             commit = get_output("git commit-tree '%s' -p '%s' < '%s'" % (tree, parent, tmpfile))
@@ -420,13 +416,14 @@ specify either the '-a' flag or the '-d' flag to commit all changes or
 only staged changes, respectively.  To reverse the effects of this
 command, see 'uncommit'.
 """)
-    @takes_options("ad")
+    @takes_options("adm:")
     def cmd_commit(self, **flags):
         self._check_rebasing()
         self._check_commit(**flags)
         if not self._get_staged_files():
             raise YapError("No changes to commit")
-        self._do_commit()
+        msg = flags.get('-m', None)
+        self._do_commit(msg)
         self.cmd_status()
 
     @short_help("reverse the actions of the last commit")
@@ -639,6 +636,9 @@ To skip the problematic patch, run \"yap history skip\"."""
 
         if subcmd == "amend":
             self._check_commit(**flags)
+            if self._get_unstaged_files():
+                # XXX: handle unstaged changes better
+                raise YapError("Commit away changes that you aren't amending")
 
         stash = get_output("git stash create")
         run_command("git reset --hard")
@@ -658,15 +658,32 @@ To skip the problematic patch, run \"yap history skip\"."""
             else:
                 self.cmd_point("%s^" % commit, **{'-f': True})
 
-            stat = os.stat(tmpfile)
-            size = stat[6]
-            if size > 0:
-                rc = os.system("git am -3 --resolvemsg=\'%s\' %s" % (resolvemsg, tmpfile))
-                if (rc):
-                    raise YapError("Failed to apply changes")
+            try:
+                fd, tmpfile = tempfile.mkstemp("yap")
+                os.close(fd)
+                os.system("git format-patch -k --stdout '%s' > %s" % (commit, tmpfile))
+                if subcmd == "amend":
+                    self.cmd_point(commit, **{'-f': True})
+            finally:
+                if subcmd == "amend":
+                    run_command("git stash apply --index %s" % stash[0])
 
-            if stash:
-                run_command("git stash apply %s" % stash[0])
+            try:
+                if subcmd == "amend":
+                    self._do_uncommit()
+                    self._do_commit()
+                else:
+                    self.cmd_point("%s^" % commit, **{'-f': True})
+
+                stat = os.stat(tmpfile)
+                size = stat[6]
+                if size > 0:
+                    rc = os.system("git am -3 --resolvemsg=\'%s\' %s" % (resolvemsg, tmpfile))
+                    if (rc):
+                        raise YapError("Failed to apply changes")
+            finally:
+                if stash:
+                    run_command("git stash apply --index %s" % stash[0])
         finally:
             os.unlink(tmpfile)
         self.cmd_status()
@@ -779,15 +796,52 @@ a previously added repository.
 
         try:
             command = command.replace('-', '_')
-            meth = self.__getattribute__("cmd_"+command)
+
+            meth = None
+            for p in self.plugins:
+                try:
+                    meth = p.__getattribute__("cmd_"+command)
+                except AttributeError:
+                    continue
+
+            try:
+                default_meth = self.__getattribute__("cmd_"+command)
+            except AttributeError:
+                default_meth = None
+
+            if meth is None:
+                meth = default_meth
+            if meth is None:
+                raise AttributeError
+
             try:
                 if "options" in meth.__dict__:
-                    flags, args = getopt.getopt(args, meth.options)
+                    options = meth.options
+                    if default_meth and "options" in default_meth.__dict__:
+                        options += default_meth.options
+                    flags, args = getopt.getopt(args, options)
                     flags = dict(flags)
                 else:
                     flags = dict()
 
+                # invoke pre-hooks
+                for p in self.plugins:
+                    try:
+                        meth = p.__getattribute__("pre_"+command)
+                    except AttributeError:
+                        continue
+                    meth(*args, **flags)
+
                 meth(*args, **flags)
+
+                # invoke post-hooks
+                for p in self.plugins:
+                    try:
+                        meth = p.__getattribute__("post_"+command)
+                    except AttributeError:
+                        continue
+                    meth()
+
             except (TypeError, getopt.GetoptError):
                 if debug:
                     raise
