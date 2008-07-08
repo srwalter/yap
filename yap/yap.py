@@ -267,10 +267,42 @@ ssh://, or http:// schemes.  By default, the directory used is the last
 component of the URL, sans '.git'.  This can be overridden by providing
 a second argument.
 """)
-    def cmd_clone(self, url, directory=""):
+    def cmd_clone(self, url, directory=None):
         "<url> [directory]"
-        # XXX: implement in terms of init + remote add + fetch
-        os.system("git clone '%s' %s" % (url, directory))
+
+        if '://' not in url and url[0] != '/':
+            url = os.path.join(os.getcwd(), url)
+
+        if directory is None:
+            directory = url.rsplit('/')[-1]
+            directory = directory.replace('.git', '')
+
+        os.mkdir(directory)
+        os.chdir(directory)
+        self.cmd_init()
+        self.cmd_repo("origin", url)
+        self.cmd_fetch("origin")
+
+        branch = None
+        if not run_command("git rev-parse --verify refs/remotes/origin/HEAD"):
+            hash = get_output("git rev-parse refs/remotes/origin/HEAD")[0]
+            for b in get_output("git for-each-ref --format='%(refname)' 'refs/remotes/origin/*'"):
+                if get_output("git rev-parse %s" % b)[0] == hash:
+                    branch = b
+                    break
+        if branch is None:
+            if not run_command("git rev-parse --verify refs/remotes/origin/master"):
+                branch = "refs/remotes/origin/master"
+        if branch is None:
+            branch = get_output("git for-each-ref --format='%(refname)' 'refs/remotes/origin/*'")
+            branch = branch[0]
+
+        hash = get_output("git rev-parse %s" % branch)
+        assert hash
+        branch = branch.replace('refs/remotes/origin/', '')
+        run_safely("git update-ref refs/heads/%s %s" % (branch, hash[0]))
+        run_safely("git symbolic-ref HEAD refs/heads/%s" % branch)
+        self.cmd_revert(**{'-a': 1})
 
     @short_help("turn a directory into a repository")
     @long_help("""
@@ -728,10 +760,10 @@ a previously added repository.
             os.system("git config --unset remote.%s.fetch" % flags['-d'])
 
         if name:
-            if flags['-d'] in [ x[0] for x in self._list_remotes() ]:
+            if name in [ x[0] for x in self._list_remotes() ]:
                 raise YapError("Repository '%s' already exists" % flags['-d'])
             os.system("git config remote.%s.url %s" % (name, url))
-            os.system("git config remote.%s.fetch +refs/heads/*:refs/remotes/%s/*" % (name, url))
+            os.system("git config remote.%s.fetch +refs/heads/*:refs/remotes/%s/*" % (name, name))
 
         for remote, url in self._list_remotes():
 	    print "%-20s %s" % (remote, url)

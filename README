@@ -33,8 +33,6 @@
 
 TODO:
     * Commands
-        * push
-        * fetch
         * merge
         * resolved
     * Better commit template message
