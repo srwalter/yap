@@ -391,7 +391,7 @@ editing each file again.
     def cmd_revert(self, *files, **flags):
         "(-a | <file>)"
         if '-a' in flags:
-            run_safely("git read-tree -m HEAD")
+            run_safely("git read-tree -u -m HEAD")
             run_safely("git checkout-index -u -f -a")
 	    self.cmd_status()
             return
@@ -537,7 +537,7 @@ of history.
             raise YapError("You have uncommitted changes.  Commit them first")
 
         run_safely("git symbolic-ref HEAD refs/heads/'%s'" % branch)
-        run_safely("git read-tree -m HEAD")
+        run_safely("git read-tree -u -m HEAD")
         run_safely("git checkout-index -u -f -a")
         self.cmd_branch()
 
@@ -576,7 +576,7 @@ operation in spite of this.
                 os.system("git update-ref HEAD '%s'" % head[0])
                 raise YapError("Pointing there will lose commits.  Use -f to force")
 
-        run_safely("git read-tree -m HEAD")
+        run_safely("git read-tree -u -m HEAD")
         run_safely("git checkout-index -u -f -a")
 
     @short_help("alter history by dropping or amending commits")
