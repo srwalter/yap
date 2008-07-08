@@ -790,10 +790,30 @@ a previously added repository.
 
         try:
             command = command.replace('-', '_')
-            meth = self.__getattribute__("cmd_"+command)
+
+            meth = None
+            for p in self.plugins:
+                try:
+                    meth = p.__getattribute__("cmd_"+command)
+                except AttributeError:
+                    continue
+
+            try:
+                default_meth = self.__getattribute__("cmd_"+command)
+            except AttributeError:
+                default_meth = None
+
+            if meth is None:
+                meth = default_meth
+            if meth is None:
+                raise AttributeError
+
             try:
                 if "options" in meth.__dict__:
-                    flags, args = getopt.getopt(args, meth.options)
+                    options = meth.options
+                    if default_meth and "options" in default_meth.__dict__:
+                        options += default_meth.options
+                    flags, args = getopt.getopt(args, options)
                     flags = dict(flags)
                 else:
                     flags = dict()
