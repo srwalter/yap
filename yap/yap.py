@@ -730,7 +730,37 @@ a previously added repository.
             os.system("git config remote.%s.fetch +refs/heads/*:refs/remotes/%s/*" % (name, url))
 
         for remote, url in self._list_remotes():
-            print "%s:\t\t%s" % (remote, url)
+	    print "%-20s %s" % (remote, url)
+    
+    @takes_options("cd")
+    def cmd_push(self, repo, **flags):
+	"[-c | -d] <repo>"
+
+	if repo not in self._list_remotes():
+	    raise YapError("No such repository: %s" % repo)
+
+        current = get_output("git symbolic-ref HEAD")[0]
+	ref = current
+	current = current.replace('refs/heads/', '')
+	remote = get_output("git config branch.%s.remote" % current)
+	if remote and remote[0] == repo:
+	    merge = get_output("git config branch.%s.merge" % current)
+	    if merge:
+		ref = merge[0]
+	
+	if '-c' not in flags and '-d' not in flags:
+	    if run_command("git rev-parse --verify refs/remotes/%s/%s"
+		    % (remote, ref.replace('refs/heads/', ''))):
+		raise YapError("No matching branch on that repo.  Use -c to create a new branch there.")
+	
+	if '-d' in flags:
+	    lhs = ""
+	else:
+	    lhs = "refs/heads/%s" % current
+	rc = os.system("git push %s %s:%s" % (repo, lhs, ref))
+	if rc:
+	    raise YapError("Push failed.")
+
 
     def cmd_help(self, cmd=None):
         if cmd is not None:
