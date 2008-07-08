@@ -818,7 +818,24 @@ a previously added repository.
                 else:
                     flags = dict()
 
+                # invoke pre-hooks
+                for p in self.plugins:
+                    try:
+                        meth = p.__getattribute__("pre_"+command)
+                    except AttributeError:
+                        continue
+                    meth(*args, **flags)
+
                 meth(*args, **flags)
+
+                # invoke post-hooks
+                for p in self.plugins:
+                    try:
+                        meth = p.__getattribute__("post_"+command)
+                    except AttributeError:
+                        continue
+                    meth()
+
             except (TypeError, getopt.GetoptError):
                 if debug:
                     raise
