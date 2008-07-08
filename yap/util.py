@@ -1,3 +1,4 @@
+import yap
 import os
 
 def get_output(cmd):
@@ -14,7 +15,7 @@ def run_command(cmd):
 def run_safely(cmd):
     rc = run_command(cmd)
     if rc:
-	raise ShellError(cmd, rc)
+	raise yap.ShellError(cmd, rc)
 
 def takes_options(options):
     def decorator(func):
