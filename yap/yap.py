@@ -743,9 +743,11 @@ a previously added repository.
 	if repo not in [ x[0] for x in self._list_remotes() ]:
 	    raise YapError("No such repository: %s" % repo)
 
-        current = get_output("git symbolic-ref HEAD")[0]
-	ref = current
-	current = current.replace('refs/heads/', '')
+        current = get_output("git symbolic-ref HEAD")
+        if not current:
+            raise YapError("Not on a branch!")
+	ref = current[0]
+	current = current[0].replace('refs/heads/', '')
 	remote = get_output("git config branch.%s.remote" % current)
 	if remote and remote[0] == repo:
 	    merge = get_output("git config branch.%s.merge" % current)
@@ -754,7 +756,7 @@ a previously added repository.
 	
 	if '-c' not in flags and '-d' not in flags:
 	    if run_command("git rev-parse --verify refs/remotes/%s/%s"
-		    % (remote[0], ref.replace('refs/heads/', ''))):
+		    % (repo, ref.replace('refs/heads/', ''))):
 		raise YapError("No matching branch on that repo.  Use -c to create a new branch there.")
 	
 	if '-d' in flags:
