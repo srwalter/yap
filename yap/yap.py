@@ -638,23 +638,11 @@ To skip the problematic patch, run \"yap history skip\"."""
                 # XXX: handle unstaged changes better
                 raise YapError("Commit away changes that you aren't amending")
 
-        stash = get_output("git stash create")
-        run_command("git reset --hard")
-
-        fd, tmpfile = tempfile.mkstemp("yap")
-        os.close(fd)
         try:
-            run_safely("git format-patch -k --stdout '%s' > %s" % (commit, tmpfile))
-            if subcmd == "amend":
-                self.cmd_point(commit, **{'-f': True})
-		if stash:
-		    run_command("git stash apply --index %s" % stash[0])
-                self._do_uncommit()
-                self._do_commit()
-                stash = get_output("git stash create")
-                run_command("git reset --hard")
-            else:
-                self.cmd_point("%s^" % commit, **{'-f': True})
+            stash = get_output("git stash create")
+            run_command("git reset --hard")
+            if subcmd == "amend" and not stash:
+                raise YapError("Failed to stash; no changes?")
 
             try:
                 fd, tmpfile = tempfile.mkstemp("yap")
@@ -664,7 +652,9 @@ To skip the problematic patch, run \"yap history skip\"."""
                     self.cmd_point(commit, **{'-f': True})
             finally:
                 if subcmd == "amend":
-                    run_command("git stash apply --index %s" % stash[0])
+                    rc = os.system("git stash apply --index %s" % stash[0])
+		    if rc:
+			raise YapError("Failed to apply stash")
 
             try:
                 if subcmd == "amend":
