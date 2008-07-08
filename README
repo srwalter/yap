@@ -41,3 +41,8 @@ TODO:
     * Fixups for running outside root?
     * Handle unmerged files in status
     * commit -t for temporary commit
+
+Author
+------
+Steven Walter (c) 2008
+This program is distributed under the terms of the GNU GPLv2
