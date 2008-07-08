@@ -181,7 +181,7 @@ class Yap(object):
         if '-d' not in flags and self._get_unstaged_files():
             if '-a' not in flags and self._get_staged_files():
                 raise YapError("Staged and unstaged changes present.  Specify what to commit")
-            run_safely("git diff-files -p | git apply --cached")
+            os.system("git diff-files -p | git apply --cached")
             for f in self._get_new_files():
                 self._stage_one(f)
 
