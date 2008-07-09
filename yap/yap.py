@@ -447,8 +447,8 @@ editing each file again.
     def cmd_revert(self, *files, **flags):
         "(-a | <file>)"
         if '-a' in flags:
-            run_safely("git read-tree -u -m HEAD")
-            run_safely("git checkout-index -u -f -a")
+	    self._unstage_all()
+	    run_safely("git checkout-index -u -f -a")
 	    self.cmd_status()
             return
 
