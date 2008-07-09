@@ -12,7 +12,12 @@ class TCommitPlugin(YapPlugin):
         repo = get_output("git rev-parse --git-dir")
         if not repo:
             return
-        state_file = os.path.join(repo[0], 'yap', 'tcommit')
+        dir = os.path.join(repo[0], 'yap')
+	try:
+	    os.mkdir(dir)
+	except IOError:
+	    pass
+        state_file = os.path.join(dir, 'tcommit')
 
         b = self._get_branches()
         b.add(branch)
