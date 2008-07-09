@@ -26,6 +26,7 @@ class YapError(Exception):
 class Yap(object):
     def __init__(self):
         self.plugins = set()
+        self.overrides = []
         plugindir = os.path.expanduser("~/.yap/plugins")
         for p in glob.glob(os.path.join(plugindir, "*.py")):
             glbls = {}
@@ -38,8 +39,15 @@ class Yap(object):
                 if cls is YapPlugin:
                     continue
                 x = cls(self)
-                # XXX: check for override overlap
                 self.plugins.add(x)
+
+                for func in dir(x):
+                    if not func.startswith('cmd_'):
+                        continue
+                    if func in self.overrides:
+                        print >>sys.stderr, "Plugin %s overrides already overridden function %s.  Disabling" % (p, func)
+                        self.plugins.remove(x)
+                        break
 
     def _add_new_file(self, file):
         repo = get_output('git rev-parse --git-dir')[0]
