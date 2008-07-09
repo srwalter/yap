@@ -35,10 +35,11 @@ TODO:
     * Commands
         * merge
         * resolved
+	* update
     * Better commit template message
     * Fixups for running outside root?
+	* relative paths is status
     * Handle unmerged files in status
-    * commit -t for temporary commit
 
 Author
 ------
