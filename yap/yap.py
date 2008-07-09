@@ -276,6 +276,13 @@ class Yap(object):
             remote = remote.replace('.url', '')
             yield remote, url
 
+    def _unstage_all(self):
+	try:
+	    run_safely("git read-tree -m HEAD")
+	except ShellError:
+	    run_safely("git read-tree HEAD")
+	    run_safely("git update-index -q --refresh")
+
     @short_help("make a local copy of an existing repository")
     @long_help("""
 The first argument is a URL to the existing repository.  This can be an
@@ -388,11 +395,7 @@ flag can be used to unstage all staged changes at once.
     def cmd_unstage(self, *files, **flags):
         "[-a] | <file>..."
         if '-a' in flags:
-	    try:
-		run_safely("git read-tree -m HEAD")
-	    except ShellError:
-		run_safely("git read-tree HEAD")
-		run_safely("git update-index -q --refresh")
+	    self._unstage_all()
             self.cmd_status()
             return
 
