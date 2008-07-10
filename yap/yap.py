@@ -467,6 +467,12 @@ changes.
             print "\t%s" % f
         if not files:
             print "\t(none)"
+	
+	files = self._get_unmerged_files()
+	if files:
+	    print "Files with conflicts:"
+	    for f in files:
+		print "\t%s" % f
 
     @short_help("remove uncommitted changes from a file (*)")
     @long_help("""
