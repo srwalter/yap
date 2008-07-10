@@ -602,14 +602,23 @@ of history.
         if not ref:
             raise YapError("No such branch: %s" % branch)
 
-        # XXX: support merging like git-checkout
-        if self._get_unstaged_files() or self._get_staged_files():
-            raise YapError("You have uncommitted changes.  Commit them first")
+	if self._get_unstaged_files() and self._get_staged_files():
+	    raise YapError("You have staged and unstaged changes.  Perhaps unstage -a?")
 
-        run_safely("git symbolic-ref HEAD refs/heads/'%s'" % branch)
-        run_safely("git read-tree -u -m HEAD")
-        run_safely("git checkout-index -u -f -a")
-        self.cmd_branch()
+	staged = bool(self._get_staged_files())
+
+	run_command("git diff-files -p | git apply --cached")
+	for f in self._get_new_files():
+	    self._stage_one(f)
+
+	idx = get_output("git write-tree")
+	new = get_output("git rev-parse refs/heads/%s" % branch)
+        run_safely("git read-tree --aggressive -u -m HEAD %s %s" % (idx[0], new[0]))
+        run_safely("git symbolic-ref HEAD refs/heads/%s" % branch)
+
+	if not staged:
+	    self._unstage_all()
+        self.cmd_status()
 
     @short_help("move the current branch to a different revision")
     @long_help("""
