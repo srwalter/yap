@@ -283,6 +283,16 @@ class Yap(object):
 	    run_safely("git read-tree HEAD")
 	    run_safely("git update-index -q --refresh")
 
+    def _get_tracking(self, current):
+	remote = get_output("git config branch.%s.remote" % current)
+        if not remote:
+            raise YapError("No tracking branch configured for '%s'" % current)
+
+        merge = get_output("git config branch.%s.merge" % current)
+        if not merge:
+            raise YapError("No tracking branch configured for '%s'" % current)
+        return remote[0], merge
+
     @short_help("make a local copy of an existing repository")
     @long_help("""
 The first argument is a URL to the existing repository.  This can be an
@@ -852,23 +862,17 @@ To skip the problematic patch, run \"yap history skip\"."""
             raise YapError("Not on a branch!")
 
 	current = current[0].replace('refs/heads/', '')
-	remote = get_output("git config branch.%s.remote" % current)
-        if not remote:
-            raise YapError("No tracking branch configured for '%s'" % current)
-
-        merge = get_output("git config branch.%s.merge" % current)
-        if not merge:
-            raise YapError("No tracking branch configured for '%s'" % current)
+        remote, merge = self._get_tracking(current)
         merge = merge[0].replace('refs/heads/', '')
 
-        self.cmd_fetch(remote[0])
-        base = get_output("git merge-base HEAD refs/remotes/%s/%s" % (remote[0], merge))
+        self.cmd_fetch(remote)
+        base = get_output("git merge-base HEAD refs/remotes/%s/%s" % (remote, merge))
 
         try:
             fd, tmpfile = tempfile.mkstemp("yap")
             os.close(fd)
             os.system("git format-patch -k --stdout '%s' > %s" % (base[0], tmpfile))
-            self.cmd_point("refs/remotes/%s/%s" % (remote[0], merge), **{'-f': True})
+            self.cmd_point("refs/remotes/%s/%s" % (remote, merge), **{'-f': True})
 
             stat = os.stat(tmpfile)
             size = stat[6]
