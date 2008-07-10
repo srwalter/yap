@@ -99,12 +99,33 @@ class Yap(object):
             files = get_output("git ls-files --cached")
         else:
             files = get_output("git diff-index --cached --name-only HEAD")
+	unmerged = self._get_unmerged_files()
+	if unmerged:
+	    unmerged = set(unmerged)
+	    files = set(files).difference(unmerged)
+	    files = list(files)
         return files
 
     def _get_unstaged_files(self):
-        files = self._get_new_files()
-        files += get_output("git ls-files -m")
+        files = get_output("git ls-files -m")
+        prefix = get_output("git rev-parse --show-prefix")
+	if prefix:
+	    files = [ os.path.join(prefix[0], x) for x in files ]
+        files += self._get_new_files()
+	unmerged = self._get_unmerged_files()
+	if unmerged:
+	    unmerged = set(unmerged)
+	    files = set(files).difference(unmerged)
+	    files = list(files)
         return files
+
+    def _get_unmerged_files(self):
+	files = get_output("git ls-files -u")
+	files = [ x.replace('\t', ' ').split(' ')[3] for x in files ]
+        prefix = get_output("git rev-parse --show-prefix")
+	if prefix:
+	    files = [ os.path.join(prefix[0], x) for x in files ]
+	return list(set(files))
 
     def _delete_branch(self, branch, force):
         current = get_output("git symbolic-ref HEAD")[0]
@@ -441,11 +462,8 @@ changes.
             print "\t(none)"
 
         print "Files with unstaged changes:"
-        prefix = get_output("git rev-parse --show-prefix")
         files = self._get_unstaged_files()
         for f in files:
-            if prefix:
-                f = os.path.join(prefix[0], f)
             print "\t%s" % f
         if not files:
             print "\t(none)"
