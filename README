@@ -35,7 +35,7 @@ TODO:
     * Commands
         * merge
         * resolved
-	* update
+        * track
     * Better commit template message
     * Fixups for running outside root?
 	* relative paths is status

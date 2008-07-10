@@ -820,10 +820,64 @@ a previously added repository.
 	    raise YapError("Push failed.")
 
     def cmd_fetch(self, repo):
+        "<repo>"
 	# XXX allow defaulting of repo? yap.default
 	if repo not in [ x[0] for x in self._list_remotes() ]:
 	    raise YapError("No such repository: %s" % repo)
 	os.system("git fetch %s" % repo)
+
+    def cmd_update(self, subcmd=None):
+        "[continue | skip]"
+        if subcmd and subcmd not in ["continue", "skip"]:
+            raise TypeError
+
+        resolvemsg = """
+When you have resolved the conflicts run \"yap history continue\".
+To skip the problematic patch, run \"yap history skip\"."""
+
+        if subcmd == "continue":
+            os.system("git am -3 -r --resolvemsg='%s'" % resolvemsg)
+            return
+        if subcmd == "skip":
+            os.system("git reset --hard")
+            os.system("git am -3 --skip --resolvemsg='%s'" % resolvemsg)
+            return
+
+        self._check_rebasing()
+        if self._get_unstaged_files() or self._get_staged_files():
+            raise YapError("You have uncommitted changes.  Commit them first")
+
+        current = get_output("git symbolic-ref HEAD")
+        if not current:
+            raise YapError("Not on a branch!")
+
+	current = current[0].replace('refs/heads/', '')
+	remote = get_output("git config branch.%s.remote" % current)
+        if not remote:
+            raise YapError("No tracking branch configured for '%s'" % current)
+
+        merge = get_output("git config branch.%s.merge" % current)
+        if not merge:
+            raise YapError("No tracking branch configured for '%s'" % current)
+        merge = merge[0].replace('refs/heads/', '')
+
+        self.cmd_fetch(remote[0])
+        base = get_output("git merge-base HEAD refs/remotes/%s/%s" % (remote[0], merge))
+
+        try:
+            fd, tmpfile = tempfile.mkstemp("yap")
+            os.close(fd)
+            os.system("git format-patch -k --stdout '%s' > %s" % (base[0], tmpfile))
+            self.cmd_point("refs/remotes/%s/%s" % (remote[0], merge), **{'-f': True})
+
+            stat = os.stat(tmpfile)
+            size = stat[6]
+            if size > 0:
+                rc = os.system("git am -3 --resolvemsg=\'%s\' %s" % (resolvemsg, tmpfile))
+                if (rc):
+                    raise YapError("Failed to apply changes")
+        finally:
+            os.unlink(tmpfile)
 
     def cmd_help(self, cmd=None):
         if cmd is not None:
