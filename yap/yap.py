@@ -814,6 +814,7 @@ a previously added repository.
 	    print "%-20s %s" % (remote, url)
     
     @takes_options("cd")
+    @short_help("send local commits to a remote repository")
     def cmd_push(self, repo, **flags):
 	"[-c | -d] <repo>"
 
@@ -844,6 +845,7 @@ a previously added repository.
 	if rc:
 	    raise YapError("Push failed.")
 
+    @short_help("retrieve commits from a remote repository")
     def cmd_fetch(self, repo):
         "<repo>"
 	# XXX allow defaulting of repo? yap.default
@@ -851,6 +853,7 @@ a previously added repository.
 	    raise YapError("No such repository: %s" % repo)
 	os.system("git fetch %s" % repo)
 
+    @short_help("update the current branch relative to its tracking branch")
     def cmd_update(self, subcmd=None):
         "[continue | skip]"
         if subcmd and subcmd not in ["continue", "skip"]:
@@ -898,6 +901,7 @@ To skip the problematic patch, run \"yap history skip\"."""
         finally:
             os.unlink(tmpfile)
 
+    @short_help("query and configure remote branch tracking")
     def cmd_track(self, repo=None, branch=None):
         "[<repo> <branch>]"
 
