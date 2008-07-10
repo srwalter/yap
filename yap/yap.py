@@ -307,11 +307,15 @@ a second argument.
         if '://' not in url and url[0] != '/':
             url = os.path.join(os.getcwd(), url)
 
+        url = url.rstrip('/')
         if directory is None:
             directory = url.rsplit('/')[-1]
             directory = directory.replace('.git', '')
 
-        os.mkdir(directory)
+        try:
+            os.mkdir(directory)
+        except OSError:
+            raise YapError("Directory exists: %s" % directory)
         os.chdir(directory)
         self.cmd_init()
         self.cmd_repo("origin", url)
