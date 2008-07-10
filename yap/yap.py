@@ -596,11 +596,15 @@ are updated to reflect their state in the new branch.  Additionally, any
 future commits are added to the new branch instead of the previous line
 of history.
 """)
-    def cmd_switch(self, branch):
-        "<branch>"
+    @takes_options("f")
+    def cmd_switch(self, branch, **flags):
+        "[-f] <branch>"
         ref = get_output("git rev-parse --verify 'refs/heads/%s'" % branch)
         if not ref:
             raise YapError("No such branch: %s" % branch)
+
+	if '-f' not in flags and (self._get_unstaged_files() or self._get_staged_files()):
+	    raise YapError("You have uncommitted changes.  Use -f to continue anyway")
 
 	if self._get_unstaged_files() and self._get_staged_files():
 	    raise YapError("You have staged and unstaged changes.  Perhaps unstage -a?")
