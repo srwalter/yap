@@ -1,23 +1,10 @@
 * Yet Another (Git) Porcelain
     * Use only git plumbing
-    * Make UI cleanups like eg
-        * --staged instead of --cached
-        * "switch" instead of checkout
-        * show "status" after any modifying command
-        * "add" distinct from "stage"
-            * don't put file in index automatically
     * New features
         * Track "local" commits to limit history re-writing
         * Better SVN workflows
             * Bring metadata / config over in clone?
             * Keep metadata out of commit message?
-        * Plugin system?
-            * Register new commands
-            * Modify existing commands?  Pre/Post-hooks?
-            * 3 options
-                * plugin provides override for certain commands
-                    * only one plugin can override
-                * plugins can register pre/post-hooks for commands
         * Plugin ideas
             * svn
                 * override push/fetch
@@ -26,19 +13,18 @@
                 * add post-fetch for daily/bdaily revs
             * track published history
                 * pre-hook for history (point?)
-            * backup (foo~) on revert
-                * pre-revert hook
-            * commit -t
-                * override commit
 
 TODO:
     * Commands
         * merge
         * resolved
+        * plugins
     * Better commit template message
     * Fixups for running outside root?
 	* relative paths is status
     * Handle unmerged files in status
+    * Make push interactive with good defaults
+    * Calls from yap to cmd_* should go through plugins
 
 Author
 ------
