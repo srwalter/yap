@@ -891,8 +891,8 @@ a previously added repository.
             raise TypeError
 
         resolvemsg = """
-When you have resolved the conflicts run \"yap history continue\".
-To skip the problematic patch, run \"yap history skip\"."""
+When you have resolved the conflicts run \"yap update continue\".
+To skip the problematic patch, run \"yap update skip\"."""
 
         if subcmd == "continue":
             os.system("git am -3 -r --resolvemsg='%s'" % resolvemsg)
