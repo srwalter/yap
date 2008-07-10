@@ -883,6 +883,33 @@ To skip the problematic patch, run \"yap history skip\"."""
         finally:
             os.unlink(tmpfile)
 
+    def cmd_track(self, repo=None, branch=None):
+        "[<repo> <branch>]"
+
+        current = get_output("git symbolic-ref HEAD")
+        if not current:
+            raise YapError("Not on a branch!")
+	current = current[0].replace('refs/heads/', '')
+
+        if repo is None and branch is None:
+            repo, merge = self._get_tracking(current)
+            merge = merge[0].replace('refs/heads/', '')
+            print "Branch '%s' tracking refs/remotes/%s/%s" % (current, repo, merge)
+            return
+
+        if repo is None or branch is None:
+            raise TypeError
+
+        if repo not in [ x[0] for x in self._list_remotes() ]:
+            raise YapError("No such repository: %s" % repo)
+
+        if run_command("git rev-parse --verify refs/remotes/%s/%s" % (repo, branch)):
+            raise YapError("No such branch '%s' on repository '%s'" % (repo, branch))
+
+        os.system("git config branch.%s.remote '%s'" % (current, repo))
+        os.system("git config branch.%s.merge 'refs/heads/%s'" % (current, branch))
+        print "Branch '%s' now tracking refs/remotes/%s/%s" % (current, repo, branch)
+
     def cmd_help(self, cmd=None):
         if cmd is not None:
             try:
