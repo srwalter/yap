@@ -166,8 +166,15 @@ class Yap(object):
             run_safely("git rm --cached '%s'" % file)
         self._remove_new_file(file)
 
-    def _stage_one(self, file):
+    def _stage_one(self, file, allow_unmerged=False):
         self._assert_file_exists(file)
+	prefix = get_output("git rev-parse --show-prefix")
+	if prefix:
+	    tmp = os.path.normpath(os.path.join(prefix[0], file))
+	else:
+	    tmp = file
+	if not allow_unmerged and tmp in self._get_unmerged_files():
+	    raise YapError("Refusing to stage conflicted file: %s" % file)
         run_safely("git update-index --add '%s'" % file)
 
     def _unstage_one(self, file):
@@ -960,7 +967,7 @@ To skip the problematic patch, run \"yap history skip\"."""
             raise TypeError
         
         for f in files:
-            self._stage_one(f)
+            self._stage_one(f, True)
         self.cmd_status()
 
     def cmd_help(self, cmd=None):
