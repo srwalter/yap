@@ -849,6 +849,9 @@ a previously added repository.
     def cmd_push(self, repo=None, rhs=None, **flags):
 	"[-c | -d] <repo>"
 
+        if '-c' in flags and '-d' in flags:
+            raise TypeError
+
 	if repo and repo not in [ x[0] for x in self._list_remotes() ]:
 	    raise YapError("No such repository: %s" % repo)
 
@@ -882,6 +885,14 @@ a previously added repository.
                 assert base
                 if base[0] != hash[0]:
                     raise YapError("Branch not up-to-date with remote.  Update or use -f")
+
+        print "About to push local branch '%s' to '%s' on '%s'" % (current, rhs, repo)
+        print "Continue (y/n)? ",
+        sys.stdout.flush()
+        ans = sys.stdin.readline().strip()
+
+        if ans.lower() != 'y' and ans.lower() != 'yes':
+            raise YapError("Aborted.")
 
         if '-f' in flags:
             flags['-f'] = '-f'
