@@ -863,8 +863,24 @@ a previously added repository.
         for remote, url in self._list_remotes():
 	    print "%-20s %s" % (remote, url)
     
-    @takes_options("cdf")
     @short_help("send local commits to a remote repository")
+    @long_help("""
+When invoked with no arguments, the current branch is synchronized to
+the tracking branch of the tracking remote.  If no tracking remote is
+specified, the repository will have to be specified on the command line.
+In that case, the default is to push to a branch with the same name as
+the current branch.  This behavior can be overridden by giving a second
+argument to specify the remote branch.
+
+If the remote branch does not currently exist, the command will abort
+unless the -c flag is provided.  If the remote branch is not a direct
+descendent of the local branch, the command will abort unless the -f
+flag is provided.  Forcing a push in this way can be problematic to
+other users of the repository if they are not expecting it.
+
+To delete a branch on the remote repository, use the -d flag.
+""")
+    @takes_options("cdf")
     def cmd_push(self, repo=None, rhs=None, **flags):
 	"[-c | -d] <repo>"
 
@@ -925,6 +941,13 @@ a previously added repository.
 	    raise YapError("Push failed.")
 
     @short_help("retrieve commits from a remote repository")
+    @long_help("""
+When run with no arguments, the command will retrieve new commits from
+the remote tracking repository.  Note that this does not in any way
+alter the current branch.  For that, see "update".  If a remote other
+than the tracking remote is desired, it can be specified as the first
+argument.
+""")
     def cmd_fetch(self, repo=None):
         "<repo>"
 	if repo and repo not in [ x[0] for x in self._list_remotes() ]:
@@ -937,6 +960,14 @@ a previously added repository.
 	os.system("git fetch %s" % repo)
 
     @short_help("update the current branch relative to its tracking branch")
+    @long_help("""
+Updates the current branch relative to its remote tracking branch.  This
+command requires that the current branch have a remote tracking branch
+configured.  If any conflicts occur while applying your changes to the
+updated remote, the command will pause to allow you to fix them.  Once
+that is done, run "update" with the "continue" subcommand.  Alternately,
+the "skip" subcommand can be used to discard the conflicting changes.
+""")
     def cmd_update(self, subcmd=None):
         "[continue | skip]"
         if subcmd and subcmd not in ["continue", "skip"]:
@@ -985,6 +1016,13 @@ To skip the problematic patch, run \"yap update skip\"."""
             os.unlink(tmpfile)
 
     @short_help("query and configure remote branch tracking")
+    @long_help("""
+When invoked with no arguments, the command displays the tracking
+information for the current branch.  To configure the tracking
+information, two arguments for the remote repository and remote branch
+are given.  The tracking information is used to provide defaults for
+where to push local changes and from where to get updates to the branch.
+""")
     def cmd_track(self, repo=None, branch=None):
         "[<repo> <branch>]"
 
@@ -1013,6 +1051,12 @@ To skip the problematic patch, run \"yap update skip\"."""
         print "Branch '%s' now tracking refs/remotes/%s/%s" % (current, repo, branch)
 
     @short_help("mark files with conflicts as resolved")
+    @long_help("""
+The arguments are the files to be marked resolved.  When a conflict
+occurs while merging changes to a file, that file is marked as
+"unmerged."  Until the file(s) with conflicts are marked resolved,
+commits cannot be made.
+""")
     def cmd_resolved(self, *args):
         "<file>..."
         if not files:
