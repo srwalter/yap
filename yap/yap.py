@@ -953,6 +953,16 @@ To skip the problematic patch, run \"yap history skip\"."""
         os.system("git config branch.%s.merge 'refs/heads/%s'" % (current, branch))
         print "Branch '%s' now tracking refs/remotes/%s/%s" % (current, repo, branch)
 
+    @short_help("mark files with conflicts as resolved")
+    def cmd_resolved(self, *args):
+        "<file>..."
+        if not files:
+            raise TypeError
+        
+        for f in files:
+            self._stage_one(f)
+        self.cmd_status()
+
     def cmd_help(self, cmd=None):
         if cmd is not None:
             try:
@@ -991,7 +1001,7 @@ To skip the problematic patch, run \"yap history skip\"."""
 
     def cmd_usage(self):
         print >> sys.stderr, "usage: %s <command>" % os.path.basename(sys.argv[0])
-        print >> sys.stderr, "  valid commands: help init clone add rm stage unstage status revert commit uncommit log show diff branch switch point cherry-pick repo track push fetch update history version"
+        print >> sys.stderr, "  valid commands: help init clone add rm stage unstage status revert commit uncommit log show diff branch switch point cherry-pick repo track push fetch update history resolved version"
 
     def main(self, args):
         if len(args) < 1:
