@@ -690,7 +690,10 @@ operation in spite of this.
                 os.system("git update-ref HEAD '%s'" % head[0])
                 raise YapError("Pointing there will lose commits.  Use -f to force")
 
-        run_safely("git read-tree -u -m HEAD")
+        try:
+            run_safely("git read-tree -u -m HEAD")
+        except ShellError:
+            run_safely("git read-tree HEAD")
         run_safely("git checkout-index -u -f -a")
 
     @short_help("alter history by dropping or amending commits")
