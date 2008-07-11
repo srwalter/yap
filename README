@@ -17,14 +17,12 @@
 TODO:
     * Commands
         * merge
-        * resolved
         * plugins
     * Better commit template message
     * Fixups for running outside root?
 	* relative paths is status
-    * Handle unmerged files in status
-    * Make push interactive with good defaults
     * Calls from yap to cmd_* should go through plugins
+    * Handle working on a detached head
 
 Author
 ------
