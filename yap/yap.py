@@ -655,7 +655,8 @@ of history.
 
 	idx = get_output("git write-tree")
 	new = get_output("git rev-parse refs/heads/%s" % branch)
-        run_safely("git read-tree --aggressive -u -m HEAD %s %s" % (idx[0], new[0]))
+	if os.system("git read-tree --aggressive -u -m HEAD %s %s" % (idx[0], new[0])):
+	    raise YapError("Failed to switch")
         run_safely("git symbolic-ref HEAD refs/heads/%s" % branch)
 
 	if not staged:
@@ -701,7 +702,7 @@ operation in spite of this.
             run_safely("git read-tree -u -m HEAD")
         except ShellError:
             run_safely("git read-tree HEAD")
-        run_safely("git checkout-index -u -f -a")
+	    run_safely("git checkout-index -u -f -a")
 
     @short_help("alter history by dropping or amending commits")
     @long_help("""
