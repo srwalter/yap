@@ -637,6 +637,7 @@ of history.
     @takes_options("f")
     def cmd_switch(self, branch, **flags):
         "[-f] <branch>"
+        self._check_rebasing()
         ref = get_output("git rev-parse --verify 'refs/heads/%s'" % branch)
         if not ref:
             raise YapError("No such branch: %s" % branch)
@@ -674,6 +675,8 @@ operation in spite of this.
     @takes_options("f")
     def cmd_point(self, where, **flags):
         "[-f] <where>"
+        self._check_rebasing()
+
         head = get_output("git rev-parse --verify HEAD")
         if not head:
             raise YapError("No commit yet; nowhere to point")
@@ -883,7 +886,6 @@ To delete a branch on the remote repository, use the -d flag.
     @takes_options("cdf")
     def cmd_push(self, repo=None, rhs=None, **flags):
 	"[-c | -d] <repo>"
-
         if '-c' in flags and '-d' in flags:
             raise TypeError
 
@@ -893,6 +895,8 @@ To delete a branch on the remote repository, use the -d flag.
         current = get_output("git symbolic-ref HEAD")
         if not current:
             raise YapError("Not on a branch!")
+
+        self._check_rebasing()
 
 	current = current[0].replace('refs/heads/', '')
 	remote = get_output("git config branch.%s.remote" % current)
