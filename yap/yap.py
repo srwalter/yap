@@ -297,6 +297,10 @@ class Yap(object):
         if os.access(dotest, os.R_OK):
             raise YapError("A git operation is in progress.  Complete it first")
 
+    def _check_git(self):
+	if run_command("git rev-parse --git-dir"):
+	    raise YapError("That command must be run from inside a git repository")
+
     def _list_remotes(self):
         remotes = get_output("git config --get-regexp '^remote.*.url'")
         for x in remotes:
@@ -388,6 +392,8 @@ reverse the effects of this command, see 'rm'.
 """)
     def cmd_add(self, *files):
         "<file>..."
+        self._check_git()
+
         if not files:
             raise TypeError
         
@@ -404,6 +410,7 @@ just no longer tracked as part of the repository.
 """)
     def cmd_rm(self, *files):
         "<file>..."
+        self._check_git()
         if not files:
             raise TypeError
         
@@ -421,6 +428,7 @@ files will show as "staged changes" in the output of 'status'.
 """)
     def cmd_stage(self, *files):
         "<file>..."
+        self._check_git()
         if not files:
             raise TypeError
         
@@ -437,6 +445,7 @@ flag can be used to unstage all staged changes at once.
     @takes_options("a")
     def cmd_unstage(self, *files, **flags):
         "[-a] | <file>..."
+        self._check_git()
         if '-a' in flags:
 	    self._unstage_all()
             self.cmd_status()
@@ -458,6 +467,7 @@ changes.
 """)
     def cmd_status(self):
 	""
+        self._check_git()
         branch = get_output("git symbolic-ref HEAD")
 	if branch:
 	    branch = branch[0].replace('refs/heads/', '')
@@ -495,6 +505,7 @@ editing each file again.
     @takes_options("a")
     def cmd_revert(self, *files, **flags):
         "(-a | <file>)"
+        self._check_git()
         if '-a' in flags:
 	    self._unstage_all()
 	    run_safely("git checkout-index -u -f -a")
@@ -520,6 +531,7 @@ command, see 'uncommit'.
     @takes_options("adm:")
     def cmd_commit(self, **flags):
 	"[-a | -d]"
+        self._check_git()
         self._check_rebasing()
         self._check_commit(**flags)
         if not self._get_staged_files():
@@ -538,6 +550,7 @@ operation.
 """)
     def cmd_uncommit(self):
 	""
+        self._check_git()
         self._do_uncommit()
         self.cmd_status()
 
@@ -556,6 +569,7 @@ starting at HEAD.
     @takes_options("pr:")
     def cmd_log(self, *paths, **flags):
         "[-p] [-r <rev>] <path>..."
+        self._check_git()
         rev = flags.get('-r', 'HEAD')
         paths = ' '.join(paths)
 	if '-p' in flags:
@@ -572,6 +586,7 @@ shown.  The '-d' flag causes only staged changes to be shown.
     @takes_options("ud")
     def cmd_diff(self, **flags):
         "[ -u | -d ]"
+        self._check_git()
         if '-u' in flags and '-d' in flags:
             raise YapError("Conflicting flags: -u and -d")
 
@@ -603,6 +618,7 @@ in spite of this.
     @takes_options("fd:")
     def cmd_branch(self, branch=None, **flags):
         "[ [-f] -d <branch> | <branch> ]"
+        self._check_git()
         force = '-f' in flags
         if '-d' in flags:
             self._delete_branch(flags['-d'], force)
@@ -637,6 +653,7 @@ of history.
     @takes_options("f")
     def cmd_switch(self, branch, **flags):
         "[-f] <branch>"
+        self._check_git()
         self._check_rebasing()
         ref = get_output("git rev-parse --verify 'refs/heads/%s'" % branch)
         if not ref:
@@ -675,6 +692,7 @@ operation in spite of this.
     @takes_options("f")
     def cmd_point(self, where, **flags):
         "[-f] <where>"
+        self._check_git()
         self._check_rebasing()
 
         head = get_output("git rev-parse --verify HEAD")
@@ -728,6 +746,7 @@ the same commit as when the rewrite started.
 """)
     def cmd_history(self, subcmd, *args):
         "amend | drop <commit>"
+        self._check_git()
 
         if subcmd not in ("amend", "drop", "continue", "skip"):
             raise TypeError
@@ -818,6 +837,7 @@ the commit's author, log message, and a diff of the changes are shown.
 """)
     def cmd_show(self, commit="HEAD"):
         "[commit]"
+        self._check_git()
         os.system("git show '%s'" % commit)
 
     @short_help("apply the changes in a given commit to the current branch")
@@ -832,6 +852,7 @@ branch.
     @takes_options("r")
     def cmd_cherry_pick(self, commit, **flags):
         "[-r] <commit>"
+        self._check_git()
         if '-r' in flags:
             os.system("git revert '%s'" % commit)
         else:
@@ -848,6 +869,7 @@ a previously added repository.
     @takes_options("d:")
     def cmd_repo(self, name=None, url=None, **flags):
         "[<name> <url> | -d <name>]"
+        self._check_git()
         if name is not None and url is None:
             raise TypeError
 
@@ -886,6 +908,7 @@ To delete a branch on the remote repository, use the -d flag.
     @takes_options("cdf")
     def cmd_push(self, repo=None, rhs=None, **flags):
 	"[-c | -d] <repo>"
+        self._check_git()
         if '-c' in flags and '-d' in flags:
             raise TypeError
 
@@ -954,6 +977,7 @@ argument.
 """)
     def cmd_fetch(self, repo=None):
         "<repo>"
+        self._check_git()
 	if repo and repo not in [ x[0] for x in self._list_remotes() ]:
 	    raise YapError("No such repository: %s" % repo)
         if repo is None:
@@ -974,6 +998,7 @@ the "skip" subcommand can be used to discard the conflicting changes.
 """)
     def cmd_update(self, subcmd=None):
         "[continue | skip]"
+        self._check_git()
         if subcmd and subcmd not in ["continue", "skip"]:
             raise TypeError
 
@@ -1029,6 +1054,7 @@ where to push local changes and from where to get updates to the branch.
 """)
     def cmd_track(self, repo=None, branch=None):
         "[<repo> <branch>]"
+        self._check_git()
 
         current = get_output("git symbolic-ref HEAD")
         if not current:
@@ -1063,6 +1089,7 @@ commits cannot be made.
 """)
     def cmd_resolved(self, *args):
         "<file>..."
+        self._check_git()
         if not files:
             raise TypeError
         
