@@ -665,7 +665,7 @@ operation in spite of this.
 """)
     @takes_options("f")
     def cmd_point(self, where, **flags):
-        "<where>"
+        "[-f] <where>"
         head = get_output("git rev-parse --verify HEAD")
         if not head:
             raise YapError("No commit yet; nowhere to point")
@@ -1115,7 +1115,7 @@ To skip the problematic patch, run \"yap update skip\"."""
             except (TypeError, getopt.GetoptError):
                 if debug:
                     raise
-                print "%s %s %s" % (sys.argv[0], command, meth.__doc__)
+		print "Usage: %s %s %s" % (os.path.basename(sys.argv[0]), command, meth.__doc__)
             except YapError, e:
                 print >> sys.stderr, e
                 sys.exit(1)
