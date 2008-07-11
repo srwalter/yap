@@ -846,10 +846,10 @@ a previously added repository.
     
     @takes_options("cd")
     @short_help("send local commits to a remote repository")
-    def cmd_push(self, repo, rhs=None, **flags):
+    def cmd_push(self, repo=None, rhs=None, **flags):
 	"[-c | -d] <repo>"
 
-	if repo not in [ x[0] for x in self._list_remotes() ]:
+	if repo and repo not in [ x[0] for x in self._list_remotes() ]:
 	    raise YapError("No such repository: %s" % repo)
 
         current = get_output("git symbolic-ref HEAD")
@@ -858,6 +858,12 @@ a previously added repository.
 
 	current = current[0].replace('refs/heads/', '')
 	remote = get_output("git config branch.%s.remote" % current)
+        if repo is None and remote:
+            repo = remote[0]
+
+        if repo is None:
+            raise YapError("No tracking branch configured; specify destination repository")
+
 	if rhs is None and remote and remote[0] == repo:
 	    merge = get_output("git config branch.%s.merge" % current)
 	    if merge:
