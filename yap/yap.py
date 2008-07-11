@@ -1145,6 +1145,10 @@ commits cannot be made.
         command = args[0]
         args = args[1:]
 
+	if run_command("git --version"):
+	    print >>sys.stderr, "Failed to run git; is it installed?"
+	    sys.exit(1)
+
         debug = os.getenv('YAP_DEBUG')
 
         try:
