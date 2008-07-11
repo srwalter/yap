@@ -752,9 +752,12 @@ To skip the problematic patch, run \"yap history skip\"."""
                 # XXX: handle unstaged changes better
                 raise YapError("Commit away changes that you aren't amending")
 
+        self._unstage_all()
+
+        start = get_output("git rev-parse HEAD")
 	stash = get_output("git stash create")
+        run_command("git reset --hard")
         try:
-            run_command("git reset --hard")
 	    fd, tmpfile = tempfile.mkstemp("yap")
 	    try:
 		try:
@@ -764,14 +767,19 @@ To skip the problematic patch, run \"yap history skip\"."""
 			self.cmd_point(commit, **{'-f': True})
 		finally:
 		    if subcmd == "amend":
-			rc = os.system("git stash apply --index %s" % stash[0])
-			if rc:
-			    raise YapError("Failed to apply stash")
+			if stash:
+			    rc = os.system("git stash apply %s" % stash[0])
+			    if rc:
+				self.cmd_point(start[0], **{'-f': True})
+				os.system("git stash apply %s" % stash[0])
+				raise YapError("Failed to apply stash")
 			stash = None
 
 		if subcmd == "amend":
 		    self._do_uncommit()
-		    self._do_commit()
+                    for f in self._get_unstaged_files():
+                        self._stage_one(f)
+                    self._do_commit()
 		else:
 		    self.cmd_point("%s^" % commit, **{'-f': True})
 
@@ -785,7 +793,7 @@ To skip the problematic patch, run \"yap history skip\"."""
 		os.unlink(tmpfile)
         finally:
 	    if stash:
-		run_command("git stash apply --index %s" % stash[0])
+		run_command("git stash apply %s" % stash[0])
         self.cmd_status()
 
     @short_help("show the changes introduced by a given commit")
