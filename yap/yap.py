@@ -895,11 +895,15 @@ a previously added repository.
 	    raise YapError("Push failed.")
 
     @short_help("retrieve commits from a remote repository")
-    def cmd_fetch(self, repo):
+    def cmd_fetch(self, repo=None):
         "<repo>"
-	# XXX allow defaulting of repo? yap.default
-	if repo not in [ x[0] for x in self._list_remotes() ]:
+	if repo and repo not in [ x[0] for x in self._list_remotes() ]:
 	    raise YapError("No such repository: %s" % repo)
+        if repo is None:
+            remote = get_output("git config branch.%s.remote" % current)
+            repo = remote[0]
+        if repo is None:
+            raise YapError("No tracking branch configured; specify a repository")
 	os.system("git fetch %s" % repo)
 
     @short_help("update the current branch relative to its tracking branch")
