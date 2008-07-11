@@ -846,7 +846,7 @@ a previously added repository.
     
     @takes_options("cd")
     @short_help("send local commits to a remote repository")
-    def cmd_push(self, repo, **flags):
+    def cmd_push(self, repo, rhs=None, **flags):
 	"[-c | -d] <repo>"
 
 	if repo not in [ x[0] for x in self._list_remotes() ]:
@@ -855,24 +855,27 @@ a previously added repository.
         current = get_output("git symbolic-ref HEAD")
         if not current:
             raise YapError("Not on a branch!")
-	ref = current[0]
+
 	current = current[0].replace('refs/heads/', '')
 	remote = get_output("git config branch.%s.remote" % current)
-	if remote and remote[0] == repo:
+	if rhs is None and remote and remote[0] == repo:
 	    merge = get_output("git config branch.%s.merge" % current)
 	    if merge:
-		ref = merge[0]
+		rhs = merge[0]
 	
+        if rhs is None:
+            rhs = "refs/heads/%s" % current
+
 	if '-c' not in flags and '-d' not in flags:
 	    if run_command("git rev-parse --verify refs/remotes/%s/%s"
-		    % (repo, ref.replace('refs/heads/', ''))):
+		    % (repo, rhs.replace('refs/heads/', ''))):
 		raise YapError("No matching branch on that repo.  Use -c to create a new branch there.")
 	
 	if '-d' in flags:
 	    lhs = ""
 	else:
 	    lhs = "refs/heads/%s" % current
-	rc = os.system("git push %s %s:%s" % (repo, lhs, ref))
+	rc = os.system("git push %s %s:%s" % (repo, lhs, rhs))
 	if rc:
 	    raise YapError("Push failed.")
 
