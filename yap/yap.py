@@ -128,10 +128,11 @@ class Yap(object):
 	return list(set(files))
 
     def _delete_branch(self, branch, force):
-        current = get_output("git symbolic-ref HEAD")[0]
-        current = current.replace('refs/heads/', '')
-        if branch == current:
-            raise YapError("Can't delete current branch")
+        current = get_output("git symbolic-ref HEAD")
+	if current:
+	    current = current[0].replace('refs/heads/', '')
+	    if branch == current:
+		raise YapError("Can't delete current branch")
 
         ref = get_output("git rev-parse --verify 'refs/heads/%s'" % branch)
         if not ref:
@@ -457,8 +458,11 @@ changes.
 """)
     def cmd_status(self):
 	""
-        branch = get_output("git symbolic-ref HEAD")[0]
-        branch = branch.replace('refs/heads/', '')
+        branch = get_output("git symbolic-ref HEAD")
+	if branch:
+	    branch = branch[0].replace('refs/heads/', '')
+	else:
+	    branch = "DETACHED"
         print "Current branch: %s" % branch
 
         print "Files with staged changes:"
@@ -611,10 +615,10 @@ in spite of this.
                 raise YapError("No branch point yet.  Make a commit")
             run_safely("git update-ref 'refs/heads/%s' '%s'" % (branch, ref[0]))
 
-        current = get_output("git symbolic-ref HEAD")[0]
+        current = get_output("git symbolic-ref HEAD")
         branches = get_output("git for-each-ref --format='%(refname)' 'refs/heads/*'")
         for b in branches:
-            if b == current:
+            if current and b == current[0]:
                 print "* ",
             else:
                 print "  ",
