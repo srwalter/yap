@@ -844,7 +844,7 @@ a previously added repository.
         for remote, url in self._list_remotes():
 	    print "%-20s %s" % (remote, url)
     
-    @takes_options("cd")
+    @takes_options("cdf")
     @short_help("send local commits to a remote repository")
     def cmd_push(self, repo=None, rhs=None, **flags):
 	"[-c | -d] <repo>"
@@ -876,12 +876,21 @@ a previously added repository.
 	    if run_command("git rev-parse --verify refs/remotes/%s/%s"
 		    % (repo, rhs.replace('refs/heads/', ''))):
 		raise YapError("No matching branch on that repo.  Use -c to create a new branch there.")
+            if '-f' not in flags:
+                hash = get_output("git rev-parse refs/remotes/%s/%s" % (repo, rhs.replace('refs/heads/', '')))
+                base = get_output("git merge-base HEAD %s" % hash[0])
+                assert base
+                if base[0] != hash[0]:
+                    raise YapError("Branch not up-to-date with remote.  Update or use -f")
+
+        if '-f' in flags:
+            flags['-f'] = '-f'
 	
 	if '-d' in flags:
 	    lhs = ""
 	else:
 	    lhs = "refs/heads/%s" % current
-	rc = os.system("git push %s %s:%s" % (repo, lhs, rhs))
+	rc = os.system("git push %s %s %s:%s" % (flags.get('-f', ''), repo, lhs, rhs))
 	if rc:
 	    raise YapError("Push failed.")
 
