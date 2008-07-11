@@ -549,12 +549,15 @@ or more of the given files are listed.  The -r option changes the
 starting revision for traversing history.  By default, history is listed
 starting at HEAD.
 """)
-    @takes_options("r:")
+    @takes_options("pr:")
     def cmd_log(self, *paths, **flags):
-        "[-r <rev>] <path>..."
+        "[-p] [-r <rev>] <path>..."
         rev = flags.get('-r', 'HEAD')
         paths = ' '.join(paths)
-        os.system("git log --name-status '%s' -- %s" % (rev, paths))
+	if '-p' in flags:
+	    flags['-p'] = '-p'
+        os.system("git log %s '%s' -- %s"
+		% (flags.get('-p', '--name-status'), rev, paths))
 
     @short_help("show staged, unstaged, or all uncommitted changes")
     @long_help("""
