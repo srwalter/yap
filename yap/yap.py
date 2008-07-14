@@ -530,7 +530,7 @@ command, see 'uncommit'.
 """)
     @takes_options("adm:")
     def cmd_commit(self, **flags):
-	"[-a | -d]"
+	"[-a | -d] [-m <msg>]"
         self._check_git()
         self._check_rebasing()
         self._check_commit(**flags)
@@ -1177,6 +1177,11 @@ commits cannot be made.
             if meth is None:
                 raise AttributeError
 
+	    if meth.__doc__ is None:
+		doc = default_meth.__doc__
+	    else:
+		doc = meth.__doc__
+
             try:
                 if "options" in meth.__dict__:
                     options = meth.options
@@ -1208,7 +1213,7 @@ commits cannot be made.
             except (TypeError, getopt.GetoptError):
                 if debug:
                     raise
-		print "Usage: %s %s %s" % (os.path.basename(sys.argv[0]), command, meth.__doc__)
+		print "Usage: %s %s %s" % (os.path.basename(sys.argv[0]), command, doc)
             except YapError, e:
                 print >> sys.stderr, e
                 sys.exit(1)
