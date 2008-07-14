@@ -982,7 +982,7 @@ To delete a branch on the remote repository, use the -d flag.
                 if base[0] != hash[0]:
                     raise YapError("Branch not up-to-date with remote.  Update or use -f")
 
-	self._confirm_push(self, current, rhs, repo)
+	self._confirm_push(current, rhs, repo)
         if '-f' in flags:
             flags['-f'] = '-f'
 	
