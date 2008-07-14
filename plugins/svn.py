@@ -67,6 +67,10 @@ class SvnPlugin(YapPlugin):
 		base = get_output("git merge-base HEAD %s" % rev[0])
 		if base[0] != rev[0]:
 		    raise YapError("Branch not up-to-date.  Update first.")
+		current = get_output("git symbolic-ref HEAD")
+		if not current:
+		    raise YapError("Not on a branch!")
+		current = current[0].replace('refs/heads/', '')
 		self.yap._confirm_push(current, "trunk", "svn")
 		os.system("git svn dcommit")
 		return
