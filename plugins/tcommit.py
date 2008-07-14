@@ -51,7 +51,7 @@ class TCommitPlugin(YapPlugin):
             if branch:
                 self._add_branch(branch[0])
         else:
-            self.yap.cmd_commit(*args, **flags)
+            self.yap._call_base("cmd_commit", *args, **flags)
 
     def post_switch(self):
         branch = get_output("git symbolic-ref HEAD")
