@@ -72,6 +72,8 @@ class SvnPlugin(YapPlugin):
 		    raise YapError("Not on a branch!")
 		current = current[0].replace('refs/heads/', '')
 		self.yap._confirm_push(current, "trunk", "svn")
+		if run_command("git update-index --refresh"):
+		    raise YapError("Can't push with uncommitted changes")
 		os.system("git svn dcommit")
 		return
 	self.yap._call_base("cmd_push", *args, **flags)
