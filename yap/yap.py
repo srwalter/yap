@@ -326,6 +326,15 @@ class Yap(object):
             raise YapError("No tracking branch configured for '%s'" % current)
         return remote[0], merge
 
+    def _confirm_push(self, current, rhs, repo):
+        print "About to push local branch '%s' to '%s' on '%s'" % (current, rhs, repo)
+        print "Continue (y/n)? ",
+        sys.stdout.flush()
+        ans = sys.stdin.readline().strip()
+
+        if ans.lower() != 'y' and ans.lower() != 'yes':
+            raise YapError("Aborted.")
+
     @short_help("make a local copy of an existing repository")
     @long_help("""
 The first argument is a URL to the existing repository.  This can be an
@@ -948,14 +957,7 @@ To delete a branch on the remote repository, use the -d flag.
                 if base[0] != hash[0]:
                     raise YapError("Branch not up-to-date with remote.  Update or use -f")
 
-        print "About to push local branch '%s' to '%s' on '%s'" % (current, rhs, repo)
-        print "Continue (y/n)? ",
-        sys.stdout.flush()
-        ans = sys.stdin.readline().strip()
-
-        if ans.lower() != 'y' and ans.lower() != 'yes':
-            raise YapError("Aborted.")
-
+	self._confirm_push(self, current, rhs, repo)
         if '-f' in flags:
             flags['-f'] = '-f'
 	
