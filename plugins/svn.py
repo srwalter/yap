@@ -20,10 +20,7 @@ class SvnPlugin(YapPlugin):
         os.chdir(directory)
         self.yap.cmd_init()
         os.system("git svn init %s" % url)
-        if '-r' in flags:
-            os.system("git svn fetch -r %s:" % flags['-r'])
-        else:
-            os.system("git svn fetch")
+	os.system("git svn fetch -r %s:HEAD" % flags.get('-r', '1'))
         self.yap.cmd_repo("svn", url)
         os.system("git config yap.svn.enabled 1")
 
