@@ -922,7 +922,7 @@ a previously added repository.
         for remote, url in self._list_remotes():
 	    print "%-20s %s" % (remote, url)
     
-    @short_help("send local commits to a remote repository")
+    @short_help("send local commits to a remote repository (*)")
     @long_help("""
 When invoked with no arguments, the current branch is synchronized to
 the tracking branch of the tracking remote.  If no tracking remote is
