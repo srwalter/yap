@@ -325,6 +325,24 @@ class Yap(object):
             raise YapError("No tracking branch configured for '%s'" % current)
         return remote[0], merge
 
+    def __getattribute__(self, attr):
+	if attr.startswith("cmd_"):
+            meth = None
+            for p in self.plugins.values():
+                try:
+                    meth = p.__getattribute__(attr)
+		    break
+                except AttributeError:
+                    continue
+
+	    if meth:
+		return meth
+	return super(Yap, self).__getattribute__(attr)
+
+    def _call_base(self, method, *args, **flags):
+	base_method = super(Yap, self).__getattribute__(method)
+	return base_method(*args, **flags)
+
     @short_help("make a local copy of an existing repository")
     @long_help("""
 The first argument is a URL to the existing repository.  This can be an
@@ -1181,22 +1199,11 @@ commits cannot be made.
         try:
             command = command.replace('-', '_')
 
-            meth = None
-            for p in self.plugins.values():
-                try:
-                    meth = p.__getattribute__("cmd_"+command)
-                except AttributeError:
-                    continue
-
-            try:
-                default_meth = self.__getattribute__("cmd_"+command)
-            except AttributeError:
-                default_meth = None
-
-            if meth is None:
-                meth = default_meth
-            if meth is None:
-                raise AttributeError
+	    meth = self.__getattribute__("cmd_"+command)
+	    try:
+		default_meth = super(Yap, self).__getattribute__("cmd_"+command)
+	    except AttributeError:
+		default_meth = None
 
 	    if meth.__doc__ is not None:
 		doc = meth.__doc__

@@ -20,7 +20,6 @@ TODO:
     * Better commit template message
     * Fixups for running outside root?
 	* relative paths is status
-    * Calls from yap to cmd_* should go through plugins
     * Handle working on a detached head
 
 Author
