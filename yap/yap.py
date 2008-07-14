@@ -678,8 +678,11 @@ of history.
 
 	idx = get_output("git write-tree")
 	new = get_output("git rev-parse refs/heads/%s" % branch)
-	if os.system("git read-tree --aggressive -u -m HEAD %s %s" % (idx[0], new[0])):
-	    raise YapError("Failed to switch")
+	readtree = "git read-tree --aggressive -u -m HEAD %s %s" % (idx[0], new[0])
+	if run_command(readtree):
+	    run_command("git update-index --refresh")
+	    if os.system(readtree):
+		raise YapError("Failed to switch")
         run_safely("git symbolic-ref HEAD refs/heads/%s" % branch)
 
 	if not staged:
