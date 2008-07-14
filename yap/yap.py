@@ -571,11 +571,17 @@ starting at HEAD.
         "[-p] [-r <rev>] <path>..."
         self._check_git()
         rev = flags.get('-r', 'HEAD')
-        paths = ' '.join(paths)
+
 	if '-p' in flags:
 	    flags['-p'] = '-p'
-        os.system("git log %s '%s' -- %s"
-		% (flags.get('-p', '--name-status'), rev, paths))
+
+	if len(paths) == 1:
+	    follow = "--follow"
+	else:
+	    follow = ""
+        paths = ' '.join(paths)
+	os.system("git log -M -C %s %s '%s' -- %s"
+		% (follow, flags.get('-p', '--name-status'), rev, paths))
 
     @short_help("show staged, unstaged, or all uncommitted changes")
     @long_help("""
