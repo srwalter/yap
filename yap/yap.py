@@ -1218,10 +1218,10 @@ commits cannot be made.
                 # invoke pre-hooks
                 for p in self.plugins.values():
                     try:
-                        meth = p.__getattribute__("pre_"+command)
+                        pre_meth = p.__getattribute__("pre_"+command)
                     except AttributeError:
                         continue
-                    meth(*args, **flags)
+                    pre_meth(*args, **flags)
 
                 meth(*args, **flags)
 
