@@ -342,6 +342,14 @@ class Yap(object):
     def _call_base(self, method, *args, **flags):
 	base_method = super(Yap, self).__getattribute__(method)
 	return base_method(*args, **flags)
+    def _confirm_push(self, current, rhs, repo):
+        print "About to push local branch '%s' to '%s' on '%s'" % (current, rhs, repo)
+        print "Continue (y/n)? ",
+        sys.stdout.flush()
+        ans = sys.stdin.readline().strip()
+
+        if ans.lower() != 'y' and ans.lower() != 'yes':
+            raise YapError("Aborted.")
 
     @short_help("make a local copy of an existing repository")
     @long_help("""
@@ -974,14 +982,7 @@ To delete a branch on the remote repository, use the -d flag.
                 if base[0] != hash[0]:
                     raise YapError("Branch not up-to-date with remote.  Update or use -f")
 
-        print "About to push local branch '%s' to '%s' on '%s'" % (current, rhs, repo)
-        print "Continue (y/n)? ",
-        sys.stdout.flush()
-        ans = sys.stdin.readline().strip()
-
-        if ans.lower() != 'y' and ans.lower() != 'yes':
-            raise YapError("Aborted.")
-
+	self._confirm_push(self, current, rhs, repo)
         if '-f' in flags:
             flags['-f'] = '-f'
 	
