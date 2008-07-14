@@ -1195,10 +1195,12 @@ commits cannot be made.
             if meth is None:
                 raise AttributeError
 
-	    if meth.__doc__ is None:
+	    if meth.__doc__ is not None:
+		doc = meth.__doc__
+	    elif default_meth is not None:
 		doc = default_meth.__doc__
 	    else:
-		doc = meth.__doc__
+		doc = ""
 
             try:
                 if "options" in meth.__dict__:
