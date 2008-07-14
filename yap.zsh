@@ -15,13 +15,16 @@ _yap-commands () {
 	'point:move the current branch to a different revision'
 	'repo:list, add, or delete configured remote repositories'
 	'revert:remove uncommitted changes from a file (*)'
+	'resolved:mark files with conflicts as resolved'
 	'rm:delete a file from the repository'
 	'show:show the changes introduced by a given commit'
 	'stage:stage changes in a file for commit'
 	'status:show files with staged and unstaged changes'
 	'switch:change the current working branch'
+	'track:query and configure remote branch tracking'
 	'uncommit:reverse the actions of the last commit'
 	'unstage:unstage changes in a file'
+	'update:update the current branch relative to its tracking branch'
 	'version:report the current version of yap'
     )
 
@@ -48,10 +51,25 @@ _yap-rm () {
 	'*:file:_files' && ret=0
 }
 
+_yap-log () {
+    _arguments \
+	'*:file:_files' && ret=0
+}
+
+_yap-resolved () {
+    _arguments \
+	'*:file:_files' && ret=0
+}
+
+_yap-switch () {
+    _arguments \
+	'*:branch:__git_heads' && ret=0
+}
+
 _yap-branch () {
     _arguments \
 	'-d[delete a branch]:local branch' \
-	'*:branch' && ret=0
+	'*:branch:__git_heads' && ret=0
 }
 
 _yap () {
