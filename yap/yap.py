@@ -25,13 +25,13 @@ class YapError(Exception):
 
 class Yap(object):
     def __init__(self):
-        self.plugins = set()
+        self.plugins = dict()
         self.overrides = []
         plugindir = os.path.expanduser("~/.yap/plugins")
         for p in glob.glob(os.path.join(plugindir, "*.py")):
             glbls = {}
             execfile(p, glbls)
-            for cls in glbls.values():
+            for k, cls in glbls.items():
                 if not type(cls) == type:
                     continue
                 if not issubclass(cls, YapPlugin):
@@ -39,15 +39,14 @@ class Yap(object):
                 if cls is YapPlugin:
                     continue
                 x = cls(self)
-                self.plugins.add(x)
 
                 for func in dir(x):
                     if not func.startswith('cmd_'):
                         continue
                     if func in self.overrides:
                         print >>sys.stderr, "Plugin %s overrides already overridden function %s.  Disabling" % (p, func)
-                        self.plugins.remove(x)
                         break
+		self.plugins[k] = x
 
     def _add_new_file(self, file):
         repo = get_output('git rev-parse --git-dir')[0]
@@ -1103,6 +1102,25 @@ commits cannot be made.
             self._stage_one(f, True)
         self.cmd_status()
 
+    @short_help("show information about loaded plugins")
+    def cmd_plugins(self):
+	""
+	if not self.plugins:
+	    print >>sys.stderr, "No plugins loaded."
+	for k, v in self.plugins.items():
+	    doc = v.__doc__
+	    if doc is None:
+		doc = "No description"
+	    print "%-20s%s" % (k, doc)
+	    first = True
+	    for func in dir(v):
+		if not func.startswith('cmd_'):
+		    continue
+		if first is True:
+		    print "\tOverrides:"
+		    first = False
+		print "\t%s" % func
+
     def cmd_help(self, cmd=None):
         if cmd is not None:
             try:
@@ -1141,7 +1159,7 @@ commits cannot be made.
 
     def cmd_usage(self):
         print >> sys.stderr, "usage: %s <command>" % os.path.basename(sys.argv[0])
-        print >> sys.stderr, "  valid commands: help init clone add rm stage unstage status revert commit uncommit log show diff branch switch point cherry-pick repo track push fetch update history resolved version"
+        print >> sys.stderr, "  valid commands: help init clone add rm stage unstage status revert commit uncommit log show diff branch switch point cherry-pick repo track push fetch update history resolved plugins version"
 
     def main(self, args):
         if len(args) < 1:
@@ -1161,7 +1179,7 @@ commits cannot be made.
             command = command.replace('-', '_')
 
             meth = None
-            for p in self.plugins:
+            for p in self.plugins.values():
                 try:
                     meth = p.__getattribute__("cmd_"+command)
                 except AttributeError:
@@ -1193,7 +1211,7 @@ commits cannot be made.
                     flags = dict()
 
                 # invoke pre-hooks
-                for p in self.plugins:
+                for p in self.plugins.values():
                     try:
                         meth = p.__getattribute__("pre_"+command)
                     except AttributeError:
@@ -1203,7 +1221,7 @@ commits cannot be made.
                 meth(*args, **flags)
 
                 # invoke post-hooks
-                for p in self.plugins:
+                for p in self.plugins.values():
                     try:
                         meth = p.__getattribute__("post_"+command)
                     except AttributeError:
