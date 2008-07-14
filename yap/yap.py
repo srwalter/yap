@@ -1168,10 +1168,15 @@ commits cannot be made.
             attr = self.__getattribute__(name)
             if not callable(attr):
                 continue
+
             try:
                 short_msg = attr.short_help
             except AttributeError:
-                continue
+		try:
+		    default_meth = super(Yap, self).__getattribute__(name)
+		    short_msg = default_meth.short_help
+		except AttributeError:
+		    continue
 
             name = name.replace('cmd_', '')
             name = name.replace('_', '-')
