@@ -85,7 +85,7 @@ class SvnPlugin(YapPlugin):
 	if subcmd not in ["enable"]:
 	    raise TypeError
 
-	if "svn" not in [x[0] for x in self._list_remotes()]:
+	if "svn" not in [x[0] for x in self.yap._list_remotes()]:
 	    raise YapError("The svn plugin requires a remote named 'svn'")
 
         os.system("git config yap.svn.enabled 1")
