@@ -736,17 +736,12 @@ operation in spite of this.
         if not head:
             raise YapError("No commit yet; nowhere to point")
 
-        ref = get_output("git rev-parse --verify '%s'" % where)
+        ref = get_output("git rev-parse --verify '%s^{commit}'" % where)
         if not ref:
             raise YapError("Not a valid ref: %s" % where)
 
         if self._get_unstaged_files() or self._get_staged_files():
             raise YapError("You have uncommitted changes.  Commit them first")
-
-        type = get_output("git cat-file -t '%s'" % ref[0])
-        if type and type[0] == "tag":
-            tag = get_output("git cat-file tag '%s'" % ref[0])
-            ref[0] = tag[0].split(' ')[1]
 
         run_safely("git update-ref HEAD '%s'" % ref[0])
 
