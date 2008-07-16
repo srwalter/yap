@@ -690,8 +690,11 @@ of history.
         if not ref:
             raise YapError("No such branch: %s" % branch)
 
-	if '-f' not in flags and (self._get_unstaged_files() or self._get_staged_files()):
-	    raise YapError("You have uncommitted changes.  Use -f to continue anyway")
+	if '-f' not in flags:
+	    if (self._get_staged_files() 
+		    or (self._get_unstaged_files() 
+			and run_command("git update-index --refresh"))):
+		raise YapError("You have uncommitted changes.  Use -f to continue anyway")
 
 	if self._get_unstaged_files() and self._get_staged_files():
 	    raise YapError("You have staged and unstaged changes.  Perhaps unstage -a?")
