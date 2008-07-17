@@ -40,8 +40,14 @@ class SvnPlugin(YapPlugin):
 	self.yap._confirm_push(current, "trunk", "svn")
 	if run_command("git update-index --refresh"):
 	    raise YapError("Can't push with uncommitted changes")
+
+	master = get_output("git rev-parse --verify refs/heads/master")
 	os.system("git svn dcommit")
 	run_safely("git svn rebase")
+	if not master:
+	    master = get_output("git rev-parse --verify refs/heads/master")
+	    if master:
+		run_safely("git update-ref -d refs/heads/master %s" % master[0])
 
     def _enabled(self):
 	enabled = get_output("git config yap.svn.enabled")
