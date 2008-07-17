@@ -1,6 +1,6 @@
 
 from yap import YapPlugin, YapError
-from yap.util import get_output, takes_options, run_command, short_help
+from yap.util import get_output, takes_options, run_command, run_safely, short_help
 import os
 
 class SvnPlugin(YapPlugin):
@@ -75,6 +75,7 @@ class SvnPlugin(YapPlugin):
 		if run_command("git update-index --refresh"):
 		    raise YapError("Can't push with uncommitted changes")
 		os.system("git svn dcommit")
+		run_safely("git svn rebase")
 		return
 	self.yap._call_base("cmd_push", *args, **flags)
 
