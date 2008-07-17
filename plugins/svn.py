@@ -24,6 +24,25 @@ class SvnPlugin(YapPlugin):
         self.yap.cmd_repo("svn", url)
         os.system("git config yap.svn.enabled 1")
 
+    def _push_svn(self):
+	print "Verifying branch is up-to-date"
+	self.yap.cmd_fetch("svn")
+	ref = self._get_svn_ref()
+	rev = get_output("git rev-parse %s" % ref)
+	assert rev
+	base = get_output("git merge-base HEAD %s" % rev[0])
+	if base[0] != rev[0]:
+	    raise YapError("Branch not up-to-date.  Update first.")
+	current = get_output("git symbolic-ref HEAD")
+	if not current:
+	    raise YapError("Not on a branch!")
+	current = current[0].replace('refs/heads/', '')
+	self.yap._confirm_push(current, "trunk", "svn")
+	if run_command("git update-index --refresh"):
+	    raise YapError("Can't push with uncommitted changes")
+	os.system("git svn dcommit")
+	run_safely("git svn rebase")
+
     def _enabled(self):
 	enabled = get_output("git config yap.svn.enabled")
 	return bool(enabled)
@@ -59,23 +78,7 @@ class SvnPlugin(YapPlugin):
     def cmd_push(self, *args, **flags):
 	if self._enabled():
 	    if args and args[0] == 'svn':
-		print "Verifying branch is up-to-date"
-		self.yap.cmd_fetch("svn")
-		ref = self._get_svn_ref()
-		rev = get_output("git rev-parse %s" % ref)
-		assert rev
-		base = get_output("git merge-base HEAD %s" % rev[0])
-		if base[0] != rev[0]:
-		    raise YapError("Branch not up-to-date.  Update first.")
-		current = get_output("git symbolic-ref HEAD")
-		if not current:
-		    raise YapError("Not on a branch!")
-		current = current[0].replace('refs/heads/', '')
-		self.yap._confirm_push(current, "trunk", "svn")
-		if run_command("git update-index --refresh"):
-		    raise YapError("Can't push with uncommitted changes")
-		os.system("git svn dcommit")
-		run_safely("git svn rebase")
+		self._push_svn()
 		return
 	self.yap._call_base("cmd_push", *args, **flags)
 
