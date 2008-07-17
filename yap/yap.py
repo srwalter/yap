@@ -1254,6 +1254,8 @@ commits cannot be made.
                     raise
 		print "Usage: %s %s %s" % (os.path.basename(sys.argv[0]), command, doc)
             except YapError, e:
+                if debug:
+                    raise
                 print >> sys.stderr, e
                 sys.exit(1)
         except AttributeError:
