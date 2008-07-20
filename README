@@ -21,6 +21,9 @@ TODO:
     * Fixups for running outside root?
 	* relative paths is status
     * Handle working on a detached head
+    * SVN plugin
+        * support branches (all branches, standard layout)
+        * support cache servers (tagged blobs for config?)
 
 Author
 ------
