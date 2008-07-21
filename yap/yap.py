@@ -323,7 +323,7 @@ class Yap(object):
         merge = get_output("git config branch.%s.merge" % current)
         if not merge:
             raise YapError("No tracking branch configured for '%s'" % current)
-        return remote[0], merge
+        return remote[0], merge[0]
 
     def __getattribute__(self, attr):
 	if attr.startswith("cmd_"):
@@ -1055,7 +1055,7 @@ To skip the problematic patch, run \"yap update skip\"."""
 
 	current = current[0].replace('refs/heads/', '')
         remote, merge = self._get_tracking(current)
-        merge = merge[0].replace('refs/heads/', '')
+        merge = merge.replace('refs/heads/', '')
 
         self.cmd_fetch(remote)
         base = get_output("git merge-base HEAD refs/remotes/%s/%s" % (remote, merge))
@@ -1094,7 +1094,7 @@ where to push local changes and from where to get updates to the branch.
 
         if repo is None and branch is None:
             repo, merge = self._get_tracking(current)
-            merge = merge[0].replace('refs/heads/', '')
+            merge = merge.replace('refs/heads/', '')
             print "Branch '%s' tracking refs/remotes/%s/%s" % (current, repo, merge)
             return
 
