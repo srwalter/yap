@@ -1003,11 +1003,17 @@ argument.
     def cmd_fetch(self, repo=None):
         "<repo>"
         self._check_git()
+        current = get_output("git symbolic-ref HEAD")
+        if not current:
+            raise YapError("Not on a branch!")
+
 	if repo and repo not in [ x[0] for x in self._list_remotes() ]:
 	    raise YapError("No such repository: %s" % repo)
         if repo is None:
+            current = current[0].replace('refs/heads/', '')
             remote = get_output("git config branch.%s.remote" % current)
-            repo = remote[0]
+            if remote:
+                repo = remote[0]
         if repo is None:
             raise YapError("No tracking branch configured; specify a repository")
 	os.system("git fetch %s" % repo)
