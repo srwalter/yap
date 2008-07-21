@@ -239,7 +239,7 @@ class Yap(object):
 
     def _do_commit(self, msg=None):
         tree = get_output("git write-tree")[0]
-        parent = get_output("git rev-parse --verify HEAD 2> /dev/null")[0]
+        parent = get_output("git rev-parse --verify HEAD 2> /dev/null")
 
         if os.environ.has_key('YAP_EDITOR'):
             editor = os.environ['YAP_EDITOR']
@@ -279,8 +279,8 @@ class Yap(object):
 	fd_w.close()
 	fd_r.close()
 
-        if parent != 'HEAD':
-            commit = get_output("git commit-tree '%s' -p '%s' < '%s'" % (tree, parent, tmpfile))
+        if parent:
+            commit = get_output("git commit-tree '%s' -p '%s' < '%s'" % (tree, parent[0], tmpfile))
         else:
             commit = get_output("git commit-tree '%s' < '%s'" % (tree, tmpfile))
 
