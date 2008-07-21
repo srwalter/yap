@@ -1105,7 +1105,7 @@ where to push local changes and from where to get updates to the branch.
             raise YapError("No such repository: %s" % repo)
 
         if run_command("git rev-parse --verify refs/remotes/%s/%s" % (repo, branch)):
-            raise YapError("No such branch '%s' on repository '%s'" % (repo, branch))
+            raise YapError("No such branch '%s' on repository '%s'" % (branch, repo))
 
         os.system("git config branch.%s.remote '%s'" % (current, repo))
         os.system("git config branch.%s.merge 'refs/heads/%s'" % (current, branch))
