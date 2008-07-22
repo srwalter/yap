@@ -1223,10 +1223,12 @@ commits cannot be made.
 		doc = ""
 
             try:
+                options = ""
                 if "options" in meth.__dict__:
                     options = meth.options
-                    if default_meth and "options" in default_meth.__dict__:
-                        options += default_meth.options
+                if default_meth and "options" in default_meth.__dict__:
+                    options += default_meth.options
+                if options:
                     flags, args = getopt.getopt(args, options)
                     flags = dict(flags)
                 else:
