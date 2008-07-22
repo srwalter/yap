@@ -847,9 +847,8 @@ To skip the problematic patch, run \"yap history skip\"."""
 
 		if subcmd == "amend":
 		    self._do_uncommit()
-                    for f in self._get_unstaged_files():
-                        self._stage_one(f)
-                    self._do_commit()
+		    self._check_commit(**{'-a': True})
+		    self._do_commit()
 		else:
 		    self.cmd_point("%s^" % commit, **{'-f': True})
 
