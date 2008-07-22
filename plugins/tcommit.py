@@ -15,7 +15,7 @@ class TCommitPlugin(YapPlugin):
         dir = os.path.join(repo[0], 'yap')
 	try:
 	    os.mkdir(dir)
-	except IOError:
+	except OSError:
 	    pass
         state_file = os.path.join(dir, 'tcommit')
 
