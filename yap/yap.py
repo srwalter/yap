@@ -82,7 +82,10 @@ class Yap(object):
 
         repo = get_output('git rev-parse --git-dir')[0]
         path = os.path.join(repo, 'yap', 'new-files')
-        pickle.dump(files, open(path, 'w'))
+	try:
+	    pickle.dump(files, open(path, 'w'))
+	except IOError:
+	    pass
 
     def _clear_new_files(self):
         repo = get_output('git rev-parse --git-dir')[0]
