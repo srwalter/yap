@@ -180,13 +180,18 @@ class Yap(object):
     def _unstage_one(self, file):
         self._assert_file_exists(file)
         if run_command("git rev-parse HEAD"):
-            run_safely("git update-index --force-remove '%s'" % file)
+            rc = run_command("git update-index --force-remove '%s'" % file)
         else:
-            run_safely("git diff-index -p HEAD '%s' | git apply -R --cached" % file)
+            rc = run_command("git diff-index -p HEAD '%s' | git apply -R --cached" % file)
+        if rc:
+            raise YapError("Failed to unstage")
 
     def _revert_one(self, file):
         self._assert_file_exists(file)
-        self._unstage_one(file)
+        try:
+            self._unstage_one(file)
+        except YapError:
+            pass
         run_safely("git checkout-index -u -f '%s'" % file)
 
     def _parse_commit(self, commit):
