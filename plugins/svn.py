@@ -2,6 +2,7 @@
 from yap import YapPlugin, YapError
 from yap.util import get_output, takes_options, run_command, run_safely, short_help
 import os
+import tempfile
 
 class SvnPlugin(YapPlugin):
     def __init__(self, yap):
@@ -43,14 +44,53 @@ class SvnPlugin(YapPlugin):
         self._configure_repo(url)
 	os.system("git svn fetch -r %s:HEAD" % flags.get('-r', '1'))
 
-    def _push_svn(self, branch):
+    def _push_svn(self, branch, **flags):
+        if '-d' in flags:
+            raise YapError("Deleting svn branches not supported")
 	print "Verifying branch is up-to-date"
-	self.yap.cmd_fetch("svn")
+        run_safely("git svn fetch svn")
 
         branch = branch.replace('refs/heads/', '')
-	rev = get_output("git rev-parse refs/remotes/svn/%s" % branch)
+	rev = get_output("git rev-parse --verify refs/remotes/svn/%s" % branch)
+
+        # Create the branch if requested
         if not rev:
-            raise YapError("Creating svn branches not yet supported")
+            if '-c' not in flags:
+                raise YapError("No matching branch on the repo.  Use -c to create a new branch there.")
+            src  = get_output("git svn info | gawk '/URL:/{print $2}'")[0]
+            brev = get_output("git svn info | gawk '/Revision:/{print $2}'")[0]
+            root = get_output("git config svn-remote.svn.url")[0]
+            branch_path = get_output("git config svn-remote.svn.branches")[0].split(':')[0]
+            branch_path = branch_path.rstrip('/*')
+            dst = '/'.join((root, branch_path, branch))
+
+            # Create the branch in svn
+            run_safely("svn cp -r%s %s %s -m 'create branch %s'"
+                    % (brev, src, dst, branch))
+            run_safely("git svn fetch svn")
+            rev = get_output("git rev-parse refs/remotes/svn/%s 2>/dev/null" % branch)
+            base = get_output("git svn find-rev r%s" % brev)
+
+            # Apply our commits to the new branch
+            try:
+                fd, tmpfile = tempfile.mkstemp("yap")
+                os.close(fd)
+                print base[0]
+                os.system("git format-patch -k --stdout '%s' > %s"
+                        % (base[0], tmpfile))
+                start = get_output("git rev-parse HEAD")
+                self.yap.cmd_point("refs/remotes/svn/%s"
+                        % branch, **{'-f': True})
+
+                stat = os.stat(tmpfile)
+                size = stat[6]
+                if size > 0:
+                    rc = run_command("git am -3 %s" % tmpfile)
+                    if (rc):
+                        self.yap.cmd_point(start[0], **{'-f': True})
+                        raise YapError("Failed to port changes to new svn branch")
+            finally:
+                os.unlink(tmpfile)
 
 	base = get_output("git merge-base HEAD %s" % rev[0])
 	if base[0] != rev[0]:
@@ -59,15 +99,15 @@ class SvnPlugin(YapPlugin):
 	if not current:
 	    raise YapError("Not on a branch!")
 	current = current[0].replace('refs/heads/', '')
-	self.yap._confirm_push(current, "trunk", "svn")
+	self.yap._confirm_push(current, branch, "svn")
 	if run_command("git update-index --refresh"):
 	    raise YapError("Can't push with uncommitted changes")
 
-	master = get_output("git rev-parse --verify refs/heads/master")
+	master = get_output("git rev-parse --verify refs/heads/master 2>/dev/null")
 	os.system("git svn dcommit")
 	run_safely("git svn rebase")
 	if not master:
-	    master = get_output("git rev-parse --verify refs/heads/master")
+	    master = get_output("git rev-parse --verify refs/heads/master 2>/dev/null")
 	    if master:
 		run_safely("git update-ref -d refs/heads/master %s" % master[0])
 
@@ -111,7 +151,7 @@ class SvnPlugin(YapPlugin):
 	    if args and args[0] == 'svn':
                 if len (args) < 2:
                     raise YapError("Need a branch name")
-		self._push_svn(args[1])
+		self._push_svn(args[1], **flags)
 		return
             elif not args:
                 current = get_output("git symbolic-ref HEAD")
@@ -121,7 +161,7 @@ class SvnPlugin(YapPlugin):
                 current = current[0].replace('refs/heads/', '')
                 remote, merge = self.yap._get_tracking(current)
                 if remote == "svn":
-                    self._push_svn(merge)
+                    self._push_svn(merge, **flags)
                     return
 
 	self.yap._call_base("cmd_push", *args, **flags)
