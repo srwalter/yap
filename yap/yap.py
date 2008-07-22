@@ -1149,14 +1149,19 @@ commits cannot be made.
 
     def cmd_help(self, cmd=None):
         if cmd is not None:
+            cmd = "cmd_" + cmd.replace('-', '_')
             try:
-                attr = self.__getattribute__("cmd_"+cmd.replace('-', '_'))
+                attr = self.__getattribute__(cmd)
             except AttributeError:
                 raise YapError("No such command: %s" % cmd)
             try:
                 help = attr.long_help
             except AttributeError:
-                raise YapError("Sorry, no help for '%s'.  Ask Steven." % cmd)
+                attr = super(Yap, self).__getattribute__(cmd)
+                try:
+                    help = attr.long_help
+                except AttributeError:
+                    raise YapError("Sorry, no help for '%s'.  Ask Steven." % cmd)
 
             print >>sys.stderr, "The '%s' command" % cmd
             print >>sys.stderr, "\tyap %s %s" % (cmd, attr.__doc__)
