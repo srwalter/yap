@@ -14,12 +14,16 @@ class SvnPlugin(YapPlugin):
             raise YapError("Not an SVN repo: %s" % url)
         return root[0]
 
-    def _configure_repo(self, url):
+    def _configure_repo(self, url, fetch=None):
         root = self._get_root(url)
         os.system("git config svn-remote.svn.url %s" % root)
-        trunk = url.replace(root, '').strip('/')
-        os.system("git config svn-remote.svn.fetch %s:refs/remotes/svn/trunk"
-                % trunk)
+	if fetch is None:
+	    trunk = url.replace(root, '').strip('/')
+	else:
+	    trunk = fetch.split(':')[0]
+	os.system("git config svn-remote.svn.fetch %s:refs/remotes/svn/trunk"
+		% trunk)
+
         branches = trunk.replace('trunk', 'branches')
         os.system("git config svn-remote.svn.branches %s/*:refs/remotes/svn/*"
                 % branches)
