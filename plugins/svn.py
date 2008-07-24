@@ -1,8 +1,34 @@
 
 from yap import YapPlugin, YapError
 from yap.util import get_output, takes_options, run_command, run_safely, short_help
+
 import os
 import tempfile
+import glob
+import pickle
+
+class RepoBlob(object):
+    def __init__(self, url, fetch):
+	self.url = url
+	self.fetch = fetch
+
+	self.uuid = None
+	self.branches = None
+	self.tags = None
+	self.metadata = {}
+
+    def add_metadata(self, branch):
+	assert branch not in self.metadata
+	gitdir = get_output("git rev-parse --git-dir")
+	assert gitdir
+	revmap = os.path.join(gitdir[0], "svn", "svn", branch, ".rev_map*")
+	revmap = glob.glob(revmap)[0]
+	uuid = revmap.split('.')[-1]
+	if self.uuid is None:
+	    self.uuid = uuid
+	assert self.uuid == uuid
+	data = file(revmap).read()
+	self.metadata[branch] = data
 
 class SvnPlugin(YapPlugin):
     def __init__(self, yap):
@@ -32,6 +58,22 @@ class SvnPlugin(YapPlugin):
         self.yap.cmd_repo("svn", url)
         os.system("git config yap.svn.enabled 1")
 
+    def _create_tagged_blob(self):
+	url = get_output("git config svn-remote.svn.url")[0]
+	fetch = get_output("git config svn-remote.svn.fetch")[0]
+	blob = RepoBlob(url, fetch)
+	for b in get_output("git for-each-ref --format='%(refname)' 'refs/remotes/svn/*'"):
+	    b = b.replace('refs/remotes/svn/', '')
+	    blob.add_metadata(b)
+
+	fd_w, fd_r = os.popen2("git hash-object -w --stdin")
+	import __builtin__
+	__builtin__.RepoBlob = RepoBlob
+	pickle.dump(blob, fd_w)
+	fd_w.close()
+	hash = fd_r.readline().strip()
+	run_safely("git tag -f yap-svn %s" % hash)
+
     def _clone_svn(self, url, directory=None, **flags):
         url = url.rstrip('/')
         if directory is None:
@@ -48,6 +90,7 @@ class SvnPlugin(YapPlugin):
         run_command("git config svn-remote.svn.noMetadata 1")
         self._configure_repo(url)
 	os.system("git svn fetch -r %s:HEAD" % flags.get('-r', '1'))
+	self._create_tagged_blob()
 
     def _push_svn(self, branch, **flags):
         if '-d' in flags:
@@ -138,6 +181,7 @@ class SvnPlugin(YapPlugin):
 	if self._enabled():
 	    if args and args[0] == 'svn':
 		os.system("git svn fetch svn")
+		self._create_tagged_blob()
 		return
             elif not args:
                 current = get_output("git symbolic-ref HEAD")
@@ -148,6 +192,7 @@ class SvnPlugin(YapPlugin):
                 remote, merge = self.yap._get_tracking(current)
                 if remote == "svn":
                     os.system("git svn fetch svn")
+		    self._create_tagged_blob()
                     return
 	self.yap._call_base("cmd_fetch", *args, **flags)
 
