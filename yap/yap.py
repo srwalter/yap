@@ -1246,13 +1246,17 @@ commits cannot be made.
                 else:
                     flags = dict()
 
+		# cast args to a mutable type.  this lets the pre-hooks act as
+		# filters on the arguments
+		args = list(args)
+
                 # invoke pre-hooks
                 for p in self.plugins.values():
                     try:
                         pre_meth = p.__getattribute__("pre_"+command)
                     except AttributeError:
                         continue
-                    pre_meth(*args, **flags)
+                    pre_meth(args, flags)
 
                 meth(*args, **flags)
 

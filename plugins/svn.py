@@ -164,14 +164,14 @@ class SvnPlugin(YapPlugin):
 	return bool(enabled)
 
     # Ensure users don't accidentally kill our "svn" repo
-    def pre_repo(self, *args, **flags):
+    def pre_repo(self, args, flags):
 	if not self._enabled():
 	    return
         if '-d' in flags and args and args[0] == "svn":
 	    raise YapError("Refusing to delete special svn repository")
 
     # Configure git-svn if we just cloned a yap-svn repo
-    def post_clone(self, *args, **flags):
+    def post_clone(self):
 	if self._enabled():
 	    # nothing to do
 	    return
