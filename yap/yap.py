@@ -1197,6 +1197,22 @@ commits cannot be made.
             name = name.replace('cmd_', '')
             name = name.replace('_', '-')
             print >> sys.stderr, "%-16s%s" % (name, short_msg)
+	
+	print >> sys.stderr
+	print >> sys.stderr, "Commands provided by plugins:"
+	for k, v in self.plugins.items():
+	    for name in dir(v):
+		if not name.startswith('cmd_'):
+		    continue
+		try:
+		    attr = self.__getattribute__(name)
+		    short_msg = attr.short_help
+		except AttributeError:
+		    continue
+		name = name.replace('cmd_', '')
+		name = name.replace('_', '-')
+		print >> sys.stderr, "%-8s(%s) %s" % (name, k, short_msg)
+
 	print >> sys.stderr
 	print >> sys.stderr, "(*) Indicates that the command is not readily reversible"
 
