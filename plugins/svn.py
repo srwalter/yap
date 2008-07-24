@@ -170,6 +170,29 @@ class SvnPlugin(YapPlugin):
         if '-d' in flags and args and args[0] == "svn":
 	    raise YapError("Refusing to delete special svn repository")
 
+    # Configure git-svn if we just cloned a yap-svn repo
+    def post_clone(self, *args, **flags):
+	if self._enabled():
+	    # nothing to do
+	    return
+
+	run_safely("git fetch origin --tags")
+	hash = get_output("git rev-parse --verify refs/tags/yap-svn 2>/dev/null")
+	if not hash:
+	    return
+
+	fd = os.popen("git cat-file blob %s" % hash[0])
+	import __builtin__
+	__builtin__.RepoBlob = RepoBlob
+	blob = pickle.load(fd)
+	self._configure_repo(blob.url, blob.fetch)
+	for b in blob.metadata.keys():
+	    branch = os.path.join(".git", "svn", "svn", b)
+	    os.makedirs(branch)
+	    fd = file(os.path.join(branch, ".rev_map.%s" % blob.uuid), "w")
+	    fd.write(blob.metadata[b])
+	run_safely("git fetch origin 'refs/remotes/svn/*:refs/remotes/svn/*'")
+
     @takes_options("r:")
     def cmd_clone(self, *args, **flags):
         if args and not run_command("svn info %s" % args[0]):
