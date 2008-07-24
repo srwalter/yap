@@ -3,6 +3,7 @@ from yap import YapPlugin, YapError
 import os
 
 class BackupPlugin(YapPlugin):
+    "Save a backup of files before reverting them"
     def __init__(self, yap):
         self.yap = yap
 

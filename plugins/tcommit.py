@@ -5,6 +5,8 @@ import pickle
 import os
 
 class TCommitPlugin(YapPlugin):
+    "Provide a 'temporory commit' mechanism"
+
     def __init__(self, yap):
         self.yap = yap
 

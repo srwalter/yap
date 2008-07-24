@@ -31,6 +31,7 @@ class RepoBlob(object):
 	self.metadata[branch] = data
 
 class SvnPlugin(YapPlugin):
+    "Allow yap to interoperate with Subversion repositories"
     def __init__(self, yap):
         self.yap = yap
 
