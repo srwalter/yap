@@ -51,10 +51,11 @@ class SvnPlugin(YapPlugin):
 		% trunk)
 
         branches = trunk.replace('trunk', 'branches')
-        os.system("git config svn-remote.svn.branches %s/*:refs/remotes/svn/*"
-                % branches)
+	if branches != trunk:
+	    os.system("git config svn-remote.svn.branches %s/*:refs/remotes/svn/*" % branches)
         tags = trunk.replace('trunk', 'tags')
-        os.system("git config svn-remote.svn.tags %s/*:refs/tags/*" % tags)
+	if tags != trunk:
+	    os.system("git config svn-remote.svn.tags %s/*:refs/tags/*" % tags)
         self.yap.cmd_repo("svn", url)
         os.system("git config yap.svn.enabled 1")
 
