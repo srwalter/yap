@@ -128,7 +128,7 @@ class SvnPlugin(YapPlugin):
         if args and not run_command("svn info %s" % args[0]):
             self._clone_svn(*args, **flags)
         else:
-            self.yap._call_base("cmd_commit", *args, **flags)
+            self.yap._call_base("cmd_clone", *args, **flags)
 
     def cmd_fetch(self, *args, **flags):
 	if self._enabled():
