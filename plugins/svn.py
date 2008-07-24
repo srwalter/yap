@@ -61,7 +61,7 @@ class SvnPlugin(YapPlugin):
 
     def _create_tagged_blob(self):
 	url = get_output("git config svn-remote.svn.url")[0]
-	fetch = get_output("git config svn-remote.svn.fetch")[0]
+	fetch = get_output("git config --get-all svn-remote.svn.fetch")
 	blob = RepoBlob(url, fetch)
 	for b in get_output("git for-each-ref --format='%(refname)' 'refs/remotes/svn/*'"):
 	    b = b.replace('refs/remotes/svn/', '')
@@ -186,7 +186,10 @@ class SvnPlugin(YapPlugin):
 	import __builtin__
 	__builtin__.RepoBlob = RepoBlob
 	blob = pickle.load(fd)
-	self._configure_repo(blob.url, blob.fetch)
+	self._configure_repo(blob.url, blob.fetch[0])
+	for extra in blob.fetch[1:]:
+	    run_safely("git config svn-remote.svn.fetch %s" % extra)
+
 	for b in blob.metadata.keys():
 	    branch = os.path.join(".git", "svn", "svn", b)
 	    os.makedirs(branch)
