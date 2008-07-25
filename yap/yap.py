@@ -858,6 +858,7 @@ To skip the problematic patch, run \"yap history skip\"."""
 		stat = os.stat(tmpfile)
 		size = stat[6]
 		if size > 0:
+		    run_safely("git update-index --refresh")
 		    rc = os.system("git am -3 --resolvemsg=\'%s\' %s" % (resolvemsg, tmpfile))
 		    if (rc):
 			raise YapError("Failed to apply changes")
