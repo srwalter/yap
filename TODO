@@ -1,14 +1,5 @@
 * Yet Another (Git) Porcelain
-    * Use only git plumbing
-    * New features
-        * Track "local" commits to limit history re-writing
-        * Better SVN workflows
-            * Bring metadata / config over in clone?
-            * Keep metadata out of commit message?
         * Plugin ideas
-            * mls
-                * override clone
-                * add post-fetch for daily/bdaily revs
             * track published history
                 * pre-hook for history (point?)
 
@@ -19,8 +10,6 @@ TODO:
     * Fixups for running outside root?
 	* relative paths is status
     * Handle working on a detached head
-    * SVN plugin
-        * support cache servers (tagged blobs for config?)
     * Better message when deleting branches
 
 Author
