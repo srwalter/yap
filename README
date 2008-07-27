@@ -1,0 +1,28 @@
+Yet Another (Git) Porcelain
+===========================
+This project is three things, in increasing order of relevance:
+
+    1) A git porcelain implemented in python
+    2) A git porcelain with a friendlier, more orthogonal interface
+    3) A extensible git porcelain
+
+The third point is most interesting, because as far as the author is
+aware, it is the first such project to attempt to achieve this.
+Included in this distribution are plugins to create backups during
+revert, make "temporary" commits, and ease interoperability with
+subversion repositories.
+
+Using git to operate on subversion-hosted repositories is a frequent use
+case, and will continue to be until the world embraces git as the
+awesome tool it is (keep in mind that even CVS is still in common
+usage).  The git-svn tool distributed with git greatly facilitates this.
+However, using git-svn requires markedly different workflows, commands,
+and mental processes than does working with git-native repositories.
+
+By leveraging the extensible nature of yap, its svn mode strives to make
+a remote svn repository act and feel as much like a git repository as
+possible to lessen the impedance mismatch to the user.
+
+Yap is still very much a work-in-progress.  Patches are welcome.
+Suggestions are welcome.  Bug reports are expected.  Hopefully this
+yap can fill a gap in your git toolbox.
