@@ -6,8 +6,6 @@
             * Bring metadata / config over in clone?
             * Keep metadata out of commit message?
         * Plugin ideas
-            * svn
-                * override push/fetch
             * mls
                 * override clone
                 * add post-fetch for daily/bdaily revs
@@ -22,8 +20,8 @@ TODO:
 	* relative paths is status
     * Handle working on a detached head
     * SVN plugin
-        * support branches (all branches, standard layout)
         * support cache servers (tagged blobs for config?)
+    * Better message when deleting branches
 
 Author
 ------
