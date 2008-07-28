@@ -22,12 +22,14 @@ class RepoBlob(object):
 	gitdir = get_output("git rev-parse --git-dir")
 	assert gitdir
 	revmap = os.path.join(gitdir[0], "svn", "svn", branch, ".rev_map*")
-	revmap = glob.glob(revmap)[0]
-	uuid = revmap.split('.')[-1]
+	revmap = glob.glob(revmap)
+	if not revmap:
+	    return
+	uuid = revmap[0].split('.')[-1]
 	if self.uuid is None:
 	    self.uuid = uuid
 	assert self.uuid == uuid
-	data = file(revmap).read()
+	data = file(revmap[0]).read()
 	self.metadata[branch] = data
 
 class SvnPlugin(YapPlugin):
