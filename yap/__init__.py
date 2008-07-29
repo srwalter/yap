@@ -1,3 +1,3 @@
-from yap import Yap, YapError, ShellError
-from plugin import YapPlugin
+from yap import YapCore, YapError, ShellError
+import yap
 import util

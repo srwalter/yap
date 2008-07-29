@@ -11,4 +11,4 @@ dir = os.path.dirname(os.path.dirname(sys.argv[0]))
 sys.path.insert(0, os.path.join(dir, 'lib', 'yap'))
 
 import yap
-yap.Yap().main(sys.argv[1:])
+yap.yap.Yap().main(sys.argv[1:])

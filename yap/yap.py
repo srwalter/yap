@@ -22,10 +22,7 @@ class YapError(Exception):
     def __str__(self):
         return self.msg
 
-class Yap(object):
-    def __init__(self):
-	pass
-
+class YapCore(object):
     def _add_new_file(self, file):
         repo = get_output('git rev-parse --git-dir')[0]
         dir = os.path.join(repo, 'yap')
@@ -1147,6 +1144,27 @@ commits cannot be made.
     def cmd_usage(self):
         print >> sys.stderr, "usage: %s <command>" % os.path.basename(sys.argv[0])
         print >> sys.stderr, "  valid commands: help init clone add rm stage unstage status revert commit uncommit log show diff branch switch point cherry-pick repo track push fetch update history resolved version"
+
+def yap_metaclass(name, bases, dct):
+    plugindir = os.path.join("~", ".yap", "plugins", "*.py")
+    plugins = []
+    for p in glob.glob(os.path.expanduser(plugindir)):
+	glbls = {}
+	execfile(p, glbls)
+	for k, cls in glbls.items():
+	    if not type(cls) == type:
+		continue
+	    if not issubclass(cls, YapCore):
+		continue
+	    if cls is YapCore:
+		continue
+	    plugins.append(cls)
+    bases = plugins + list(bases)
+    return type(name, tuple(bases), dct)
+
+
+class Yap(YapCore):
+    __metaclass__ = yap_metaclass
 
     def main(self, args):
         if len(args) < 1:
