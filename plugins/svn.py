@@ -78,6 +78,19 @@ class SvnPlugin(YapPlugin):
 	hash = fd_r.readline().strip()
 	run_safely("git tag -f yap-svn %s" % hash)
 
+    def _cleanup_branches(self):
+	for b in get_output("git for-each-ref --format='%(refname)' 'refs/remotes/svn/*@*'"):
+	    head = b.replace('refs/remotes/svn/', '')
+	    path = os.path.join(".git", "svn", "svn", head)
+	    files = os.listdir(path)
+	    for f in files:
+		os.unlink(os.path.join(path, f))
+	    os.rmdir(path)
+
+	    ref = get_output("git rev-parse %s" % b)
+	    if ref:
+		run_safely("git update-ref -d %s %s" % (b, ref[0]))
+
     def _clone_svn(self, url, directory=None, **flags):
         url = url.rstrip('/')
         if directory is None:
@@ -94,6 +107,8 @@ class SvnPlugin(YapPlugin):
         run_command("git config svn-remote.svn.noMetadata 1")
         self._configure_repo(url)
 	os.system("git svn fetch -r %s:HEAD" % flags.get('-r', '1'))
+
+	self._cleanup_branches()
 	self._create_tagged_blob()
 
     def _push_svn(self, branch, **flags):
@@ -162,6 +177,11 @@ class SvnPlugin(YapPlugin):
 	    master = get_output("git rev-parse --verify refs/heads/master 2>/dev/null")
 	    if master:
 		run_safely("git update-ref -d refs/heads/master %s" % master[0])
+    
+    def _fetch_svn(self):
+	os.system("git svn fetch svn")
+	self._create_tagged_blob()
+	self._cleanup_branches()
 
     def _enabled(self):
 	enabled = get_output("git config yap.svn.enabled")
@@ -210,8 +230,7 @@ class SvnPlugin(YapPlugin):
     def cmd_fetch(self, *args, **flags):
 	if self._enabled():
 	    if args and args[0] == 'svn':
-		os.system("git svn fetch svn")
-		self._create_tagged_blob()
+		self._fetch_svn()
 		return
             elif not args:
                 current = get_output("git symbolic-ref HEAD")
@@ -221,8 +240,7 @@ class SvnPlugin(YapPlugin):
                 current = current[0].replace('refs/heads/', '')
                 remote, merge = self.yap._get_tracking(current)
                 if remote == "svn":
-                    os.system("git svn fetch svn")
-		    self._create_tagged_blob()
+		    self._fetch_svn()
                     return
 	self.yap._call_base("cmd_fetch", *args, **flags)
 
