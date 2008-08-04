@@ -164,6 +164,25 @@ class SvnPlugin(YapCore):
 	enabled = get_output("git config yap.svn.enabled")
 	return bool(enabled)
 
+    def _applicable(self, args):
+	if not self._enabled():
+	    return False
+
+	if args and args[0] == 'svn':
+	    return True
+
+	if not args:
+	    current = get_output("git symbolic-ref HEAD")
+	    if not current:
+		raise YapError("Not on a branch!")
+
+	    current = current[0].replace('refs/heads/', '')
+	    remote, merge = self._get_tracking(current)
+	    if remote == "svn":
+		return True
+	
+	return False
+
     # Ensure users don't accidentally kill our "svn" repo
     def cmd_repo(self, *args, **flags):
 	if self._enabled():
@@ -207,41 +226,28 @@ class SvnPlugin(YapCore):
             super(SvnPlugin, self).cmd_clone(*args, **flags)
 
     def cmd_fetch(self, *args, **flags):
-	if self._enabled():
-	    if args and args[0] == 'svn':
-		os.system("git svn fetch svn")
-		self._create_tagged_blob()
-		return
-            elif not args:
-                current = get_output("git symbolic-ref HEAD")
-                if not current:
-                    raise YapError("Not on a branch!")
+	if self._applicable(args):
+	    os.system("git svn fetch svn")
+	    self._create_tagged_blob()
+	    return
 
-                current = current[0].replace('refs/heads/', '')
-                remote, merge = self._get_tracking(current)
-                if remote == "svn":
-                    os.system("git svn fetch svn")
-		    self._create_tagged_blob()
-                    return
 	super(SvnPlugin, self).cmd_fetch(*args, **flags)
 
     def cmd_push(self, *args, **flags):
-	if self._enabled():
-	    if args and args[0] == 'svn':
-                if len (args) < 2:
-                    raise YapError("Need a branch name")
-		self._push_svn(args[1], **flags)
-		return
-            elif not args:
+	if self._applicable(args):
+	    if len (args) >= 2:
+		merge = args[1]
+	    else:
                 current = get_output("git symbolic-ref HEAD")
                 if not current:
                     raise YapError("Not on a branch!")
 
                 current = current[0].replace('refs/heads/', '')
                 remote, merge = self._get_tracking(current)
-                if remote == "svn":
-                    self._push_svn(merge, **flags)
-                    return
+		if remote != "svn":
+		    raise YapError("Need a branch name")
+	    self._push_svn(merge, **flags)
+	    return
 	super(SvnPlugin, self).cmd_push(*args, **flags)
 
     @short_help("change options for the svn plugin")
