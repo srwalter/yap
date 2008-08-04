@@ -317,6 +317,19 @@ class YapCore(object):
         if ans.lower() != 'y' and ans.lower() != 'yes':
             raise YapError("Aborted.")
 
+    def _get_attr(self, name, attr):
+	val = None
+	for c in self.__class__.__bases__:
+	    try:
+		m2 = c.__dict__[name]
+	    except KeyError:
+		continue
+	    try:
+		val = m2.__getattribute__(attr)
+	    except AttributeError:
+		continue
+	return val
+
     @short_help("make a local copy of an existing repository")
     @long_help("""
 The first argument is a URL to the existing repository.  This can be an
@@ -1096,22 +1109,21 @@ commits cannot be made.
 
     def cmd_help(self, cmd=None):
         if cmd is not None:
+	    oldcmd = cmd
             cmd = "cmd_" + cmd.replace('-', '_')
             try:
                 attr = self.__getattribute__(cmd)
             except AttributeError:
                 raise YapError("No such command: %s" % cmd)
-            try:
-                help = attr.long_help
-            except AttributeError:
-                attr = super(Yap, self).__getattribute__(cmd)
-                try:
-                    help = attr.long_help
-                except AttributeError:
-                    raise YapError("Sorry, no help for '%s'.  Ask Steven." % cmd)
 
-            print >>sys.stderr, "The '%s' command" % cmd
-            print >>sys.stderr, "\tyap %s %s" % (cmd, attr.__doc__)
+            try:
+		help = self._get_attr(cmd, "long_help")
+            except AttributeError:
+		raise
+		raise YapError("Sorry, no help for '%s'.  Ask Steven." % cmd)
+
+            print >>sys.stderr, "The '%s' command" % oldcmd
+            print >>sys.stderr, "\tyap %s %s" % (oldcmd, attr.__doc__)
             print >>sys.stderr, "%s" % help
             return
 
@@ -1126,13 +1138,9 @@ commits cannot be made.
                 continue
 
             try:
-                short_msg = attr.short_help
+                short_msg = self._get_attr(name, "short_help")
             except AttributeError:
-		try:
-		    default_meth = super(Yap, self).__getattribute__(name)
-		    short_msg = default_meth.short_help
-		except AttributeError:
-		    continue
+		continue
 
             name = name.replace('cmd_', '')
             name = name.replace('_', '-')
@@ -1162,7 +1170,6 @@ def yap_metaclass(name, bases, dct):
     bases = plugins + list(bases)
     return type(name, tuple(bases), dct)
 
-
 class Yap(YapCore):
     __metaclass__ = yap_metaclass
 
@@ -1182,17 +1189,29 @@ class Yap(YapCore):
 
         try:
             command = command.replace('-', '_')
-
 	    meth = self.__getattribute__("cmd_"+command)
-	    doc = meth.__doc__
+	    doc = self._get_attr("cmd_"+command, "__doc__")
 
             try:
-                options = ""
-                if "options" in meth.__dict__:
-                    options = meth.options
-                if options:
-                    flags, args = getopt.getopt(args, options)
-                    flags = dict(flags)
+		options = ""
+		for c in self.__class__.__bases__:
+		    try:
+			t = c.__dict__["cmd_"+command]
+		    except KeyError:
+			continue
+		    if "options" in t.__dict__:
+			options += t.options
+
+		if options:
+		    try:
+			flags, args = getopt.getopt(args, options)
+			flags = dict(flags)
+		    except getopt.GetoptError, e:
+			if debug:
+			    raise
+			print "Usage: %s %s %s" % (os.path.basename(sys.argv[0]), command, doc)
+			print e
+			sys.exit(2)
 		else:
 		    flags = dict()
 
