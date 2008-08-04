@@ -1154,20 +1154,30 @@ commits cannot be made.
         print >> sys.stderr, "  valid commands: help init clone add rm stage unstage status revert commit uncommit log show diff branch switch point cherry-pick repo track push fetch update history resolved version"
 
 def yap_metaclass(name, bases, dct):
-    plugindir = os.path.join("~", ".yap", "plugins", "*.py")
-    plugins = []
+    plugindir = os.path.join("~", ".yap", "plugins")
+    plugindir = os.path.expanduser(plugindir)
+    sys.path.insert(0, plugindir)
+    plugindir = os.path.join(plugindir, "*.py")
+
+    plugins = set()
     for p in glob.glob(os.path.expanduser(plugindir)):
-	glbls = {}
-	execfile(p, glbls)
-	for k, cls in glbls.items():
+	plugin = os.path.basename(p).replace('.py', '')
+	m = __import__(plugin)
+	for k in dir(m):
+	    cls = m.__dict__[k]
 	    if not type(cls) == type:
 		continue
 	    if not issubclass(cls, YapCore):
 		continue
 	    if cls is YapCore:
 		continue
-	    plugins.append(cls)
-    bases = plugins + list(bases)
+	    plugins.add(cls)
+
+    p2 = plugins.copy()
+    for cls in plugins:
+	p2 -= set(cls.__bases__)
+    plugins = p2
+    bases = list(plugins) + list(bases)
     return type(name, tuple(bases), dct)
 
 class Yap(YapCore):
