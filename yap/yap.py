@@ -1126,7 +1126,7 @@ occurs while merging changes to a file, that file is marked as
 "unmerged."  Until the file(s) with conflicts are marked resolved,
 commits cannot be made.
 """)
-    def cmd_resolved(self, *args):
+    def cmd_resolved(self, *files):
         "<file>..."
         self._check_git()
         if not files:
