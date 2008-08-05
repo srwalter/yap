@@ -1153,13 +1153,12 @@ commits cannot be made.
         print >> sys.stderr, "usage: %s <command>" % os.path.basename(sys.argv[0])
         print >> sys.stderr, "  valid commands: help init clone add rm stage unstage status revert commit uncommit log show diff branch switch point cherry-pick repo track push fetch update history resolved version"
 
-def yap_metaclass(name, bases, dct):
+def load_plugins():
     plugindir = os.path.join("~", ".yap", "plugins")
     plugindir = os.path.expanduser(plugindir)
-    sys.path.insert(0, plugindir)
     plugindir = os.path.join(plugindir, "*.py")
 
-    plugins = set()
+    plugins = dict()
     for p in glob.glob(os.path.expanduser(plugindir)):
 	plugin = os.path.basename(p).replace('.py', '')
 	m = __import__(plugin)
@@ -1171,8 +1170,15 @@ def yap_metaclass(name, bases, dct):
 		continue
 	    if cls is YapCore:
 		continue
-	    plugins.add(cls)
+	    plugins[k] = cls
+    return plugins
 
+def yap_metaclass(name, bases, dct):
+    plugindir = os.path.join("~", ".yap", "plugins")
+    plugindir = os.path.expanduser(plugindir)
+    sys.path.insert(0, plugindir)
+
+    plugins = set(load_plugins().values())
     p2 = plugins.copy()
     for cls in plugins:
 	p2 -= set(cls.__bases__)
