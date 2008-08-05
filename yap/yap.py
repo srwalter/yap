@@ -497,9 +497,7 @@ flag can be used to unstage all staged changes at once.
         "[-a] | <file>..."
         self._check_git()
         if '-a' in flags:
-	    self._unstage_all()
-            self.cmd_status()
-            return
+	    files = self._get_staged_files()
 
         if not files:
             raise TypeError
