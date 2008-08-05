@@ -1,5 +1,5 @@
 
-from yap import YapPlugin, YapError
+from yap.yap import YapCore, YapError
 from yap.util import get_output, takes_options, run_command, run_safely, short_help
 
 import os
@@ -32,11 +32,8 @@ class RepoBlob(object):
 	data = file(revmap[0]).read()
 	self.metadata[branch] = data
 
-class SvnPlugin(YapPlugin):
+class SvnPlugin(YapCore):
     "Allow yap to interoperate with Subversion repositories"
-    def __init__(self, yap):
-        self.yap = yap
-
     def _get_root(self, url):
         root = get_output("svn info %s 2>/dev/null | gawk '/Repository Root:/{print $3}'" % url)
         if not root:
@@ -59,7 +56,7 @@ class SvnPlugin(YapPlugin):
         tags = trunk.replace('trunk', 'tags')
 	if tags != trunk:
 	    os.system("git config svn-remote.svn.tags %s/*:refs/tags/*" % tags)
-        self.yap.cmd_repo("svn", url)
+        self.cmd_repo("svn", url)
         os.system("git config yap.svn.enabled 1")
 
     def _create_tagged_blob(self):
@@ -90,7 +87,7 @@ class SvnPlugin(YapPlugin):
             raise YapError("Directory exists: %s" % directory)
         os.chdir(directory)
 
-        self.yap.cmd_init()
+        self.cmd_init()
         run_command("git config svn-remote.svn.noMetadata 1")
         self._configure_repo(url)
 	os.system("git svn fetch -r %s:HEAD" % flags.get('-r', '1'))
@@ -131,7 +128,7 @@ class SvnPlugin(YapPlugin):
                 os.system("git format-patch -k --stdout '%s' > %s"
                         % (base[0], tmpfile))
                 start = get_output("git rev-parse HEAD")
-                self.yap.cmd_point("refs/remotes/svn/%s"
+                self.cmd_point("refs/remotes/svn/%s"
                         % branch, **{'-f': True})
 
                 stat = os.stat(tmpfile)
@@ -139,7 +136,7 @@ class SvnPlugin(YapPlugin):
                 if size > 0:
                     rc = run_command("git am -3 %s" % tmpfile)
                     if (rc):
-                        self.yap.cmd_point(start[0], **{'-f': True})
+                        self.cmd_point(start[0], **{'-f': True})
                         raise YapError("Failed to port changes to new svn branch")
             finally:
                 os.unlink(tmpfile)
@@ -151,7 +148,7 @@ class SvnPlugin(YapPlugin):
 	if not current:
 	    raise YapError("Not on a branch!")
 	current = current[0].replace('refs/heads/', '')
-	self.yap._confirm_push(current, branch, "svn")
+	self._confirm_push(current, branch, "svn")
 	if run_command("git update-index --refresh"):
 	    raise YapError("Can't push with uncommitted changes")
 
@@ -168,14 +165,16 @@ class SvnPlugin(YapPlugin):
 	return bool(enabled)
 
     # Ensure users don't accidentally kill our "svn" repo
-    def pre_repo(self, args, flags):
-	if not self._enabled():
-	    return
-        if '-d' in flags and args and args[0] == "svn":
-	    raise YapError("Refusing to delete special svn repository")
+    def cmd_repo(self, *args, **flags):
+	if self._enabled():
+	    if '-d' in flags and args and args[0] == "svn":
+		raise YapError("Refusing to delete special svn repository")
+	super(SvnPlugin, self).cmd_repo(*args, **flags)
 
     # Configure git-svn if we just cloned a yap-svn repo
-    def post_clone(self):
+    def cmd_clone(self, *args, **flags):
+	super(SvnPlugin, self).cmd_clone(*args, **flags)
+
 	if self._enabled():
 	    # nothing to do
 	    return
@@ -205,7 +204,7 @@ class SvnPlugin(YapPlugin):
         if args and not run_command("svn info %s" % args[0]):
             self._clone_svn(*args, **flags)
         else:
-            self.yap._call_base("cmd_clone", *args, **flags)
+            super(SvnPlugin, self).cmd_clone(*args, **flags)
 
     def cmd_fetch(self, *args, **flags):
 	if self._enabled():
@@ -219,12 +218,12 @@ class SvnPlugin(YapPlugin):
                     raise YapError("Not on a branch!")
 
                 current = current[0].replace('refs/heads/', '')
-                remote, merge = self.yap._get_tracking(current)
+                remote, merge = self._get_tracking(current)
                 if remote == "svn":
                     os.system("git svn fetch svn")
 		    self._create_tagged_blob()
                     return
-	self.yap._call_base("cmd_fetch", *args, **flags)
+	super(SvnPlugin, self).cmd_fetch(*args, **flags)
 
     def cmd_push(self, *args, **flags):
 	if self._enabled():
@@ -239,12 +238,11 @@ class SvnPlugin(YapPlugin):
                     raise YapError("Not on a branch!")
 
                 current = current[0].replace('refs/heads/', '')
-                remote, merge = self.yap._get_tracking(current)
+                remote, merge = self._get_tracking(current)
                 if remote == "svn":
                     self._push_svn(merge, **flags)
                     return
-
-	self.yap._call_base("cmd_push", *args, **flags)
+	super(SvnPlugin, self).cmd_push(*args, **flags)
 
     @short_help("change options for the svn plugin")
     def cmd_svn(self, subcmd):
@@ -253,7 +251,7 @@ class SvnPlugin(YapPlugin):
 	if subcmd not in ["enable"]:
 	    raise TypeError
 
-	if "svn" in [x[0] for x in self.yap._list_remotes()]:
+	if "svn" in [x[0] for x in self._list_remotes()]:
 	    raise YapError("A remote named 'svn' already exists")
 
 

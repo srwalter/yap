@@ -1,14 +1,11 @@
 
-from yap import YapPlugin
+from yap.yap import YapCore
 from yap.util import get_output, takes_options
 import pickle
 import os
 
-class TCommitPlugin(YapPlugin):
+class TCommitPlugin(YapCore):
     "Provide a 'temporory commit' mechanism"
-
-    def __init__(self, yap):
-        self.yap = yap
 
     def _add_branch(self, branch):
         repo = get_output("git rev-parse --git-dir")
@@ -48,15 +45,23 @@ class TCommitPlugin(YapPlugin):
     @takes_options("t")
     def cmd_commit(self, *args, **flags):
         if '-t' in flags:
-            self.yap.cmd_commit(*[], **{'-a': 1, '-m': 'yap wip'})
+	    override = True
+	    args = []
+	    flags = {'-a': 1, '-m': 'yap wip'}
+	else:
+	    override = False
+
+	super(TCommitPlugin, self).cmd_commit(*args, **flags)
+
+	if override is True:
             branch = get_output("git symbolic-ref HEAD")
             if branch:
                 self._add_branch(branch[0])
-        else:
-            self.yap._call_base("cmd_commit", *args, **flags)
 
-    def post_switch(self):
+    def cmd_switch(self, *args, **flags):
+	super(TCommitPlugin, self).cmd_switch(*args, **flags)
+
         branch = get_output("git symbolic-ref HEAD")
         if branch[0] in self._get_branches():
-            self.yap.cmd_uncommit()
+            self.cmd_uncommit()
             self._remove_branch(branch[0])
