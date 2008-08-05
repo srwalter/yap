@@ -1149,6 +1149,16 @@ commits cannot be made.
 	print >> sys.stderr
 	print >> sys.stderr, "(*) Indicates that the command is not readily reversible"
 
+    @short_help("show information about loaded plugins")
+    def cmd_plugins(self):
+	""
+	print >> sys.stderr, "Loaded plugins:"
+	plugins = load_plugins()
+	for name, cls in plugins.items():
+	    print "\t%-16s: %s" % (name, cls.__doc__)
+	if not plugins:
+	    print "\t%-16s" % "None"
+
     def cmd_usage(self):
         print >> sys.stderr, "usage: %s <command>" % os.path.basename(sys.argv[0])
         print >> sys.stderr, "  valid commands: help init clone add rm stage unstage status revert commit uncommit log show diff branch switch point cherry-pick repo track push fetch update history resolved version"
