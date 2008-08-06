@@ -185,7 +185,7 @@ class Yap(object):
         if run_command("git rev-parse HEAD"):
             rc = run_command("git update-index --force-remove '%s'" % file)
         else:
-            rc = run_command("git diff-index -p HEAD '%s' | git apply -R --cached" % file)
+            rc = run_command("git diff-index --cached -p HEAD '%s' | git apply -R --cached" % file)
         if rc:
             raise YapError("Failed to unstage")
 
