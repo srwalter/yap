@@ -247,7 +247,13 @@ class Yap(object):
 
     def _do_commit(self, msg=None):
         tree = get_output("git write-tree")[0]
-        parent = get_output("git rev-parse --verify HEAD 2> /dev/null")
+
+	repo = get_output('git rev-parse --git-dir')[0]
+	head_file = os.path.join(repo, 'yap', 'merge')
+	try:
+	    parent = pickle.load(file(head_file))
+	except IOError:
+	    parent = get_output("git rev-parse --verify HEAD 2> /dev/null")
 
         if os.environ.has_key('YAP_EDITOR'):
             editor = os.environ['YAP_EDITOR']
@@ -263,7 +269,6 @@ class Yap(object):
 
 
 	if msg is None:
-	    repo = get_output('git rev-parse --git-dir')[0]
 	    msg_file = os.path.join(repo, 'yap', 'msg')
 	    if os.access(msg_file, os.R_OK):
 		fd1 = file(msg_file)
@@ -288,12 +293,14 @@ class Yap(object):
 	fd_r.close()
 
         if parent:
-            commit = get_output("git commit-tree '%s' -p '%s' < '%s'" % (tree, parent[0], tmpfile))
+	    parent = ' -p '.join(parent)
+            commit = get_output("git commit-tree '%s' -p %s < '%s'" % (tree, parent, tmpfile))
         else:
             commit = get_output("git commit-tree '%s' < '%s'" % (tree, tmpfile))
 
         os.unlink(tmpfile)
         run_safely("git update-ref HEAD '%s'" % commit[0])
+	self._clear_state()
 
     def _check_rebasing(self):
         repo = get_output('git rev-parse --git-dir')[0]
@@ -358,6 +365,16 @@ class Yap(object):
 
         if ans.lower() != 'y' and ans.lower() != 'yes':
             raise YapError("Aborted.")
+
+    def _clear_state(self):
+	repo = get_output('git rev-parse --git-dir')[0]
+        dir = os.path.join(repo, 'yap')
+	try:
+	    os.unlink(os.path.join(dir, 'new-files'))
+	    os.unlink(os.path.join(dir, 'merge'))
+	    os.unlink(os.path.join(dir, 'msg'))
+	except OSError:
+	    pass
 
     @short_help("make a local copy of an existing repository")
     @long_help("""
@@ -542,6 +559,7 @@ editing each file again.
         if '-a' in flags:
 	    self._unstage_all()
 	    run_safely("git checkout-index -u -f -a")
+	    self._clear_state()
 	    self.cmd_status()
             return
 
@@ -722,6 +740,9 @@ of history.
 		raise YapError("Failed to switch")
         run_safely("git symbolic-ref HEAD refs/heads/%s" % branch)
 
+	if '-f' not in flags:
+	    self._clear_state()
+
 	if not staged:
 	    self._unstage_all()
         self.cmd_status()
@@ -764,6 +785,7 @@ operation in spite of this.
         except ShellError:
             run_safely("git read-tree HEAD")
 	    run_safely("git checkout-index -u -f -a")
+	self._clear_state()
 
     @short_help("alter history by dropping or amending commits")
     @long_help("""
@@ -1135,6 +1157,74 @@ commits cannot be made.
         for f in files:
             self._stage_one(f, True)
         self.cmd_status()
+
+    @short_help("merge a branch into the current branch")
+    def cmd_merge(self, branch):
+	"<branch>"
+        self._check_git()
+
+	branch_name = branch
+	branch = get_output("git rev-parse --verify %s" % branch)
+	if not branch:
+	    raise YapError("No such branch: %s" % branch)
+	branch = branch[0]
+
+	base = get_output("git merge-base HEAD %s" % branch)
+	if not base:
+	    raise YapError("Branch '%s' is not a fork of the current branch"
+		    % branch)
+
+	readtree = ("git read-tree --aggressive -u -m %s HEAD %s"
+		% (base[0], branch))
+	if run_command(readtree):
+	    run_command("git update-index --refresh")
+	    if os.system(readtree):
+		raise YapError("Failed to merge")
+
+	repo = get_output('git rev-parse --git-dir')[0]
+        dir = os.path.join(repo, 'yap')
+        try:
+            os.mkdir(dir)
+        except OSError:
+            pass
+	msg_file = os.path.join(dir, 'msg')
+	msg = file(msg_file, 'w')
+	print >>msg, "Merge branch '%s'" % branch_name
+	msg.close()
+
+	head = get_output("git rev-parse --verify HEAD")
+	assert head
+	heads = [head[0], branch]
+	head_file = os.path.join(dir, 'merge')
+	pickle.dump(heads, file(head_file, 'w'))
+
+	self._merge_index(branch, base[0])
+	if self._get_unmerged_files():
+	    self.cmd_status()
+	    raise YapError("Fix conflicts then commit")
+
+	self._do_commit()
+
+    def _merge_index(self, branch, base):
+	for f in self._get_unmerged_files():
+	    fd, bfile = tempfile.mkstemp("yap")
+	    os.close(fd)
+	    rc = os.system("git show %s:%s > %s" % (base, f, bfile))
+	    assert rc == 0
+
+	    fd, ofile = tempfile.mkstemp("yap")
+	    os.close(fd)
+	    rc = os.system("git show %s:%s > %s" % (branch, f, ofile))
+	    assert rc == 0
+
+	    command = "git merge-file -L %(file)s -L %(file)s.base -L %(file)s.%(branch)s %(file)s %(base)s %(other)s " % dict(file=f, branch=branch, base=bfile, other=ofile)
+	    rc = os.system(command)
+	    os.unlink(ofile)
+	    os.unlink(bfile)
+
+	    assert rc >= 0
+	    if rc == 0:
+		self._stage_one(f, True)
 
     @short_help("show information about loaded plugins")
     def cmd_plugins(self):
