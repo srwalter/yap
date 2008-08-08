@@ -5,7 +5,6 @@ import getopt
 import pickle
 import tempfile
 
-from plugin import YapPlugin
 from util import *
 
 class ShellError(Exception):
@@ -23,31 +22,7 @@ class YapError(Exception):
     def __str__(self):
         return self.msg
 
-class Yap(object):
-    def __init__(self):
-        self.plugins = dict()
-        self.overrides = []
-        plugindir = os.path.expanduser("~/.yap/plugins")
-        for p in glob.glob(os.path.join(plugindir, "*.py")):
-            glbls = {}
-            execfile(p, glbls)
-            for k, cls in glbls.items():
-                if not type(cls) == type:
-                    continue
-                if not issubclass(cls, YapPlugin):
-                    continue
-                if cls is YapPlugin:
-                    continue
-                x = cls(self)
-
-                for func in dir(x):
-                    if not func.startswith('cmd_'):
-                        continue
-                    if func in self.overrides:
-                        print >>sys.stderr, "Plugin %s overrides already overridden function %s.  Disabling" % (p, func)
-                        break
-		self.plugins[k] = x
-
+class YapCore(object):
     def _add_new_file(self, file):
         repo = get_output('git rev-parse --git-dir')[0]
         dir = os.path.join(repo, 'yap')
@@ -340,23 +315,6 @@ class Yap(object):
             raise YapError("No tracking branch configured for '%s'" % current)
         return remote[0], merge[0]
 
-    def __getattribute__(self, attr):
-	if attr.startswith("cmd_"):
-            meth = None
-            for p in self.plugins.values():
-                try:
-                    meth = p.__getattribute__(attr)
-		    break
-                except AttributeError:
-                    continue
-
-	    if meth:
-		return meth
-	return super(Yap, self).__getattribute__(attr)
-
-    def _call_base(self, method, *args, **flags):
-	base_method = super(Yap, self).__getattribute__(method)
-	return base_method(*args, **flags)
     def _confirm_push(self, current, rhs, repo):
         print "About to push local branch '%s' to '%s' on '%s'" % (current, rhs, repo)
         print "Continue (y/n)? ",
@@ -375,6 +333,19 @@ class Yap(object):
 	    os.unlink(os.path.join(dir, 'msg'))
 	except OSError:
 	    pass
+
+    def _get_attr(self, name, attr):
+	val = None
+	for c in self.__class__.__bases__:
+	    try:
+		m2 = c.__dict__[name]
+	    except KeyError:
+		continue
+	    try:
+		val = m2.__getattribute__(attr)
+	    except AttributeError:
+		continue
+	return val
 
     @short_help("make a local copy of an existing repository")
     @long_help("""
@@ -1224,43 +1195,23 @@ commits cannot be made.
 	    if rc == 0:
 		self._stage_one(f, True)
 
-    @short_help("show information about loaded plugins")
-    def cmd_plugins(self):
-	""
-	if not self.plugins:
-	    print >>sys.stderr, "No plugins loaded."
-	for k, v in self.plugins.items():
-	    doc = v.__doc__
-	    if doc is None:
-		doc = "No description"
-	    print "%-20s%s" % (k, doc)
-	    first = True
-	    for func in dir(v):
-		if not func.startswith('cmd_'):
-		    continue
-		if first is True:
-		    print "\tOverrides:"
-		    first = False
-		print "\t%s" % func
-
     def cmd_help(self, cmd=None):
         if cmd is not None:
+	    oldcmd = cmd
             cmd = "cmd_" + cmd.replace('-', '_')
             try:
                 attr = self.__getattribute__(cmd)
             except AttributeError:
                 raise YapError("No such command: %s" % cmd)
-            try:
-                help = attr.long_help
-            except AttributeError:
-                attr = super(Yap, self).__getattribute__(cmd)
-                try:
-                    help = attr.long_help
-                except AttributeError:
-                    raise YapError("Sorry, no help for '%s'.  Ask Steven." % cmd)
 
-            print >>sys.stderr, "The '%s' command" % cmd
-            print >>sys.stderr, "\tyap %s %s" % (cmd, attr.__doc__)
+            try:
+		help = self._get_attr(cmd, "long_help")
+            except AttributeError:
+		raise
+		raise YapError("Sorry, no help for '%s'.  Ask Steven." % cmd)
+
+            print >>sys.stderr, "The '%s' command" % oldcmd
+            print >>sys.stderr, "\tyap %s %s" % (oldcmd, attr.__doc__)
             print >>sys.stderr, "%s" % help
             return
 
@@ -1275,39 +1226,66 @@ commits cannot be made.
                 continue
 
             try:
-                short_msg = attr.short_help
+                short_msg = self._get_attr(name, "short_help")
             except AttributeError:
-		try:
-		    default_meth = super(Yap, self).__getattribute__(name)
-		    short_msg = default_meth.short_help
-		except AttributeError:
-		    continue
+		continue
 
             name = name.replace('cmd_', '')
             name = name.replace('_', '-')
             print >> sys.stderr, "%-16s%s" % (name, short_msg)
 	
 	print >> sys.stderr
-	print >> sys.stderr, "Commands provided by plugins:"
-	for k, v in self.plugins.items():
-	    for name in dir(v):
-		if not name.startswith('cmd_'):
-		    continue
-		try:
-		    attr = self.__getattribute__(name)
-		    short_msg = attr.short_help
-		except AttributeError:
-		    continue
-		name = name.replace('cmd_', '')
-		name = name.replace('_', '-')
-		print >> sys.stderr, "%-8s(%s) %s" % (name, k, short_msg)
-
-	print >> sys.stderr
 	print >> sys.stderr, "(*) Indicates that the command is not readily reversible"
+
+    @short_help("show information about loaded plugins")
+    def cmd_plugins(self):
+	""
+	print >> sys.stderr, "Loaded plugins:"
+	plugins = load_plugins()
+	for name, cls in plugins.items():
+	    print "\t%-16s: %s" % (name, cls.__doc__)
+	if not plugins:
+	    print "\t%-16s" % "None"
 
     def cmd_usage(self):
         print >> sys.stderr, "usage: %s <command>" % os.path.basename(sys.argv[0])
-        print >> sys.stderr, "  valid commands: help init clone add rm stage unstage status revert commit uncommit log show diff branch switch point cherry-pick repo track push fetch update history resolved plugins version"
+        print >> sys.stderr, "  valid commands: help init clone add rm stage unstage status revert commit uncommit log show diff branch switch point cherry-pick repo track push fetch update history resolved version"
+
+def load_plugins():
+    plugindir = os.path.join("~", ".yap", "plugins")
+    plugindir = os.path.expanduser(plugindir)
+    plugindir = os.path.join(plugindir, "*.py")
+
+    plugins = dict()
+    for p in glob.glob(os.path.expanduser(plugindir)):
+	plugin = os.path.basename(p).replace('.py', '')
+	m = __import__(plugin)
+	for k in dir(m):
+	    cls = m.__dict__[k]
+	    if not type(cls) == type:
+		continue
+	    if not issubclass(cls, YapCore):
+		continue
+	    if cls is YapCore:
+		continue
+	    plugins[k] = cls
+    return plugins
+
+def yap_metaclass(name, bases, dct):
+    plugindir = os.path.join("~", ".yap", "plugins")
+    plugindir = os.path.expanduser(plugindir)
+    sys.path.insert(0, plugindir)
+
+    plugins = set(load_plugins().values())
+    p2 = plugins.copy()
+    for cls in plugins:
+	p2 -= set(cls.__bases__)
+    plugins = p2
+    bases = list(plugins) + list(bases)
+    return type(name, tuple(bases), dct)
+
+class Yap(YapCore):
+    __metaclass__ = yap_metaclass
 
     def main(self, args):
         if len(args) < 1:
@@ -1325,54 +1303,33 @@ commits cannot be made.
 
         try:
             command = command.replace('-', '_')
-
 	    meth = self.__getattribute__("cmd_"+command)
-	    try:
-		default_meth = super(Yap, self).__getattribute__("cmd_"+command)
-	    except AttributeError:
-		default_meth = None
-
-	    if meth.__doc__ is not None:
-		doc = meth.__doc__
-	    elif default_meth is not None:
-		doc = default_meth.__doc__
-	    else:
-		doc = ""
+	    doc = self._get_attr("cmd_"+command, "__doc__")
 
             try:
-                options = ""
-                if "options" in meth.__dict__:
-                    options = meth.options
-                if default_meth and "options" in default_meth.__dict__:
-                    options += default_meth.options
-                if options:
-                    flags, args = getopt.getopt(args, options)
-                    flags = dict(flags)
-                else:
-                    flags = dict()
+		options = ""
+		for c in self.__class__.__bases__:
+		    try:
+			t = c.__dict__["cmd_"+command]
+		    except KeyError:
+			continue
+		    if "options" in t.__dict__:
+			options += t.options
 
-		# cast args to a mutable type.  this lets the pre-hooks act as
-		# filters on the arguments
-		args = list(args)
-
-                # invoke pre-hooks
-                for p in self.plugins.values():
-                    try:
-                        pre_meth = p.__getattribute__("pre_"+command)
-                    except AttributeError:
-                        continue
-                    pre_meth(args, flags)
+		if options:
+		    try:
+			flags, args = getopt.getopt(args, options)
+			flags = dict(flags)
+		    except getopt.GetoptError, e:
+			if debug:
+			    raise
+			print "Usage: %s %s %s" % (os.path.basename(sys.argv[0]), command, doc)
+			print e
+			sys.exit(2)
+		else:
+		    flags = dict()
 
                 meth(*args, **flags)
-
-                # invoke post-hooks
-                for p in self.plugins.values():
-                    try:
-                        meth = p.__getattribute__("post_"+command)
-                    except AttributeError:
-                        continue
-                    meth()
-
             except (TypeError, getopt.GetoptError):
                 if debug:
                     raise
