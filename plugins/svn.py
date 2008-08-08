@@ -210,9 +210,21 @@ class SvnPlugin(YapCore):
 		raise YapError("Refusing to delete special svn repository")
 	super(SvnPlugin, self).cmd_repo(*args, **flags)
 
-    # Configure git-svn if we just cloned a yap-svn repo
+    @takes_options("r:")
     def cmd_clone(self, *args, **flags):
-	super(SvnPlugin, self).cmd_clone(*args, **flags)
+	handled = True
+	if not args:
+	    handled = False
+	if (handled and not args[0].startswith("http")
+	 	    and not args[0].startswith("svn")):
+	    handled = False
+	if handled and run_command("svn info %s" % args[0]):
+	    handled = False
+
+	if handled:
+            self._clone_svn(*args, **flags)
+	else:
+            super(SvnPlugin, self).cmd_clone(*args, **flags)
 
 	if self._enabled():
 	    # nothing to do
@@ -238,12 +250,6 @@ class SvnPlugin(YapCore):
 	    fd.write(blob.metadata[b])
 	run_safely("git fetch origin 'refs/remotes/svn/*:refs/remotes/svn/*'")
 
-    @takes_options("r:")
-    def cmd_clone(self, *args, **flags):
-        if args and not run_command("svn info %s" % args[0]):
-            self._clone_svn(*args, **flags)
-        else:
-            super(SvnPlugin, self).cmd_clone(*args, **flags)
 
     def cmd_fetch(self, *args, **flags):
 	if self._applicable(args):
