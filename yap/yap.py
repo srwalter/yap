@@ -327,12 +327,11 @@ class YapCore(object):
     def _clear_state(self):
 	repo = get_output('git rev-parse --git-dir')[0]
         dir = os.path.join(repo, 'yap')
-	try:
-	    os.unlink(os.path.join(dir, 'new-files'))
-	    os.unlink(os.path.join(dir, 'merge'))
-	    os.unlink(os.path.join(dir, 'msg'))
-	except OSError:
-	    pass
+	for f in "new-files", "merge", "msg":
+	    try:
+		os.unlink(os.path.join(dir, f))
+	    except OSError:
+		pass
 
     def _get_attr(self, name, attr):
 	val = None
