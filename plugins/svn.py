@@ -68,8 +68,6 @@ class SvnPlugin(YapCore):
 	    blob.add_metadata(b)
 
 	fd_w, fd_r = os.popen2("git hash-object -w --stdin")
-	import __builtin__
-	__builtin__.RepoBlob = RepoBlob
 	pickle.dump(blob, fd_w)
 	fd_w.close()
 	hash = fd_r.readline().strip()
@@ -236,8 +234,6 @@ class SvnPlugin(YapCore):
 	    return
 
 	fd = os.popen("git cat-file blob %s" % hash[0])
-	import __builtin__
-	__builtin__.RepoBlob = RepoBlob
 	blob = pickle.load(fd)
 	self._configure_repo(blob.url, blob.fetch[0])
 	for extra in blob.fetch[1:]:
