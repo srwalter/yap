@@ -4,8 +4,6 @@
                 * pre-hook for history (point?)
 
 TODO:
-    * Commands
-        * merge
     * Better commit template message
     * Fixups for running outside root?
 	* relative paths is status
