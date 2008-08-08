@@ -8,9 +8,8 @@ import glob
 import pickle
 
 class RepoBlob(object):
-    def __init__(self, url, fetch):
-	self.url = url
-	self.fetch = fetch
+    def __init__(self, keys):
+	self.keys = keys
 
 	self.uuid = None
 	self.branches = None
@@ -29,8 +28,9 @@ class RepoBlob(object):
 	if self.uuid is None:
 	    self.uuid = uuid
 	assert self.uuid == uuid
+	rev = get_output("git rev-parse refs/remotes/svn/%s" % branch)
 	data = file(revmap[0]).read()
-	self.metadata[branch] = data
+	self.metadata[branch] = rev[0], data
 
 class SvnPlugin(YapCore):
     "Allow yap to interoperate with Subversion repositories"
@@ -60,9 +60,11 @@ class SvnPlugin(YapCore):
         os.system("git config yap.svn.enabled 1")
 
     def _create_tagged_blob(self):
-	url = get_output("git config svn-remote.svn.url")[0]
-	fetch = get_output("git config --get-all svn-remote.svn.fetch")
-	blob = RepoBlob(url, fetch)
+	keys = dict()
+	for i in get_output("git config --list | grep ^svn-remote.svn"):
+	    k, v = i.split('=')
+	    keys[k] = v
+	blob = RepoBlob(keys)
 	for b in get_output("git for-each-ref --format='%(refname)' 'refs/remotes/svn/*'"):
 	    b = b.replace('refs/remotes/svn/', '')
 	    blob.add_metadata(b)
@@ -235,17 +237,20 @@ class SvnPlugin(YapCore):
 
 	fd = os.popen("git cat-file blob %s" % hash[0])
 	blob = pickle.load(fd)
-	self._configure_repo(blob.url, blob.fetch[0])
-	for extra in blob.fetch[1:]:
-	    run_safely("git config svn-remote.svn.fetch %s" % extra)
+	for k, v in blob.keys.items():
+	    run_safely("git config %s %s" % (k, v))
+
+        os.system("git config yap.svn.enabled 1")
+	run_safely("git fetch origin 'refs/remotes/svn/*:refs/remotes/svn/*'")
 
 	for b in blob.metadata.keys():
 	    branch = os.path.join(".git", "svn", "svn", b)
 	    os.makedirs(branch)
 	    fd = file(os.path.join(branch, ".rev_map.%s" % blob.uuid), "w")
-	    fd.write(blob.metadata[b])
-	run_safely("git fetch origin 'refs/remotes/svn/*:refs/remotes/svn/*'")
 
+	    rev, metadata = blob.metadata[b]
+	    fd.write(metadata)
+	    run_command("git update-ref refs/remotes/svn/%s %s" % (b, rev))
 
     def cmd_fetch(self, *args, **flags):
 	if self._applicable(args):
