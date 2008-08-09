@@ -7,4 +7,4 @@ all:
 install:
 	python setup.py install --prefix=$(PREFIX) --install-lib=$(PREFIX)/lib/yap
 	mkdir -p $(PREFIX)/bin
-	install -m755 yap.py $(PREFIX)/bin/yap
+	install -m755 yap.bin $(PREFIX)/bin/yap

@@ -575,7 +575,7 @@ operation.
 
     @short_help("report the current version of yap")
     def cmd_version(self):
-        print "Yap version 0.1"
+        print "Yap version %s" % self.version
 
     @short_help("show the changelog for particular versions or files")
     @long_help("""
