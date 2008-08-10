@@ -62,11 +62,6 @@ class YapCore(object):
 	except IOError:
 	    pass
 
-    def _clear_new_files(self):
-        repo = get_output('git rev-parse --git-dir')[0]
-        path = os.path.join(repo, 'yap', 'new-files')
-        os.unlink(path)
-
     def _assert_file_exists(self, file):
         if not os.access(file, os.R_OK):
             raise YapError("No such file: %s" % file)
@@ -88,7 +83,14 @@ class YapCore(object):
         prefix = get_output("git rev-parse --show-prefix")
 	if prefix:
 	    files = [ os.path.join(prefix[0], x) for x in files ]
-        files += self._get_new_files()
+        new_files = self._get_new_files()
+        if new_files:
+            staged = self._get_staged_files()
+            if staged:
+                staged = set(staged)
+                new_files = set(new_files).difference(staged)
+                new_files = list(new_files)
+            files += new_files
 	unmerged = self._get_unmerged_files()
 	if unmerged:
 	    unmerged = set(unmerged)
