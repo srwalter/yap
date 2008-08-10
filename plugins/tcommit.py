@@ -58,6 +58,14 @@ class TCommitPlugin(YapCore):
             if branch:
                 self._add_branch(branch[0])
 
+    def cmd_branch(self, *args, **flags):
+        if '-d' in flags:
+            if args:
+                branch = args[0]
+                self._remove_branch(branch)
+        
+        super(TCommitPlugin, self).cmd_commit(*args, **flags)
+
     def cmd_switch(self, *args, **flags):
 	super(TCommitPlugin, self).cmd_switch(*args, **flags)
 
