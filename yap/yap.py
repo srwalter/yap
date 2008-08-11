@@ -908,6 +908,10 @@ a previously added repository.
                 raise YapError("No such repository: %s" % flags['-d'])
             os.system("git config --unset remote.%s.url" % flags['-d'])
             os.system("git config --unset remote.%s.fetch" % flags['-d'])
+            for b in get_output("git for-each-ref --format='%(refname)' 'refs/remotes/origin/*'"):
+		hash = get_output("git rev-parse %s" % b)
+		assert hash
+		run_safely("git update-ref -d %s %s" % (b, hash[0]))
 
         if name:
             if name in [ x[0] for x in self._list_remotes() ]:
