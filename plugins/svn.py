@@ -240,6 +240,7 @@ class SvnPlugin(YapCore):
 	for k, v in blob.keys.items():
 	    run_safely("git config %s %s" % (k, v))
 
+        self.cmd_repo("svn", blob.keys['svn-remote.svn.url'])
         os.system("git config yap.svn.enabled 1")
 	run_safely("git fetch origin 'refs/remotes/svn/*:refs/remotes/svn/*'")
 
