@@ -911,7 +911,7 @@ a previously added repository.
 
         if name:
             if name in [ x[0] for x in self._list_remotes() ]:
-                raise YapError("Repository '%s' already exists" % flags['-d'])
+                raise YapError("Repository '%s' already exists" % name)
             os.system("git config remote.%s.url %s" % (name, url))
             os.system("git config remote.%s.fetch +refs/heads/*:refs/remotes/%s/*" % (name, name))
 
