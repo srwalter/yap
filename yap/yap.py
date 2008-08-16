@@ -966,7 +966,17 @@ a previously added repository.
             os.system("git config remote.%s.fetch +refs/heads/*:refs/remotes/%s/*" % (name, name))
 
         for remote, url in self._list_remotes():
-	    print "%-20s %s" % (remote, url)
+            print "%s" % remote
+            print "    URL:      %s" % url
+            first = True
+            for b in get_output("git for-each-ref --format='%%(refname)' 'refs/remotes/%s/*'" % remote):
+                b = b.replace('refs/remotes/', '')
+                if first:
+                    branches = "Branches: "
+                else:
+                    branches = "          "
+                print "    %s%s" % (branches, b)
+                first = False
     
     @short_help("send local commits to a remote repository (*)")
     @long_help("""
