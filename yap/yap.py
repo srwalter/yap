@@ -594,6 +594,7 @@ starting at HEAD.
         "[-p] [-r <rev>] <path>..."
         self._check_git()
         rev = flags.get('-r', 'HEAD')
+        rev = self._resolve_rev(rev)
 
 	if '-p' in flags:
 	    flags['-p'] = '-p'
@@ -869,6 +870,7 @@ the commit's author, log message, and a diff of the changes are shown.
     def cmd_show(self, commit="HEAD"):
         "[commit]"
         self._check_git()
+        commit = self._resolve_rev(commit)
         os.system("git show '%s'" % commit)
 
     @short_help("apply the changes in a given commit to the current branch")
