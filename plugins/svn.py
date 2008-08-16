@@ -135,7 +135,6 @@ class SvnPlugin(YapCore):
         os.chdir(directory)
 
         self.cmd_init()
-        run_command("git config svn-remote.svn.noMetadata 1")
         self._configure_repo(url)
 	os.system("git svn fetch -r %s:HEAD" % flags.get('-r', '1'))
 
