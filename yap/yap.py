@@ -196,7 +196,14 @@ class YapCore(object):
         if run_command("git rev-parse HEAD"):
             rc = run_command("git update-index --force-remove '%s'" % file)
         else:
-            rc = run_command("git diff-index --cached -p HEAD '%s' | git apply -R --cached" % file)
+            cdup = get_output("git rev-parse --show-cdup")
+            assert cdup
+            if cdup[0]:
+                cdup = cdup[0]
+            else:
+                cdup = '.'
+
+            rc = run_command("git diff-index --cached -p HEAD '%s' | (cd %s; git apply -R --cached)" % (file, cdup))
         if rc:
             raise YapError("Failed to unstage")
 
