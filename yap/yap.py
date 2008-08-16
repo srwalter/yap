@@ -66,6 +66,33 @@ class YapCore(object):
         if not os.access(file, os.R_OK):
             raise YapError("No such file: %s" % file)
 
+    def _repo_path_to_rel(self, path):
+        prefix = get_output("git rev-parse --show-prefix")
+        if not prefix:
+            return path
+        prefix = os.path.split(prefix[0])
+
+        # strip empty components from prefix
+        tmp = []
+        for x in prefix:
+            if not x:
+                continue
+            tmp.append(x)
+        prefix = tmp
+
+        path = os.path.split(path)
+        common = 0
+        for a, b in zip(prefix, path):
+            if a != b:
+                break
+            common += 1
+
+        path = path[common:]
+        cdup = [".."] * (len(prefix) - common)
+        path = cdup + list(path)
+        path = os.path.join(*path)
+        return path
+
     def _get_staged_files(self):
         if run_command("git rev-parse HEAD"):
             files = get_output("git ls-files --cached")
@@ -505,14 +532,14 @@ changes.
         print "Files with staged changes:"
         files = self._get_staged_files()
         for f in files:
-            print "\t%s" % f
+            print "\t%s" % self._repo_path_to_rel(f)
         if not files:
             print "\t(none)"
 
         print "Files with unstaged changes:"
         files = self._get_unstaged_files()
         for f in files:
-            print "\t%s" % f
+            print "\t%s" % self._repo_path_to_rel(f)
         if not files:
             print "\t(none)"
 	
@@ -520,7 +547,7 @@ changes.
 	if files:
 	    print "Files with conflicts:"
 	    for f in files:
-		print "\t%s" % f
+		print "\t%s" % self._repo_path_to_rel(f)
 
     @short_help("remove uncommitted changes from a file (*)")
     @long_help("""
