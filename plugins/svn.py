@@ -250,7 +250,8 @@ class SvnPlugin(YapCore):
 	if not args:
 	    handled = False
 	if (handled and not args[0].startswith("http")
-	 	    and not args[0].startswith("svn")):
+	 	    and not args[0].startswith("svn")
+                    and not args[0].startswith("file://")):
 	    handled = False
 	if handled and run_command("svn info %s" % args[0]):
 	    handled = False
