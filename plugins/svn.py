@@ -6,6 +6,9 @@ import os
 import tempfile
 import glob
 import pickle
+import re
+import bisect
+import struct
 
 class RepoBlob(object):
     def __init__(self, keys):
@@ -32,8 +35,39 @@ class RepoBlob(object):
 	data = file(revmap[0]).read()
 	self.metadata[branch] = rev[0], data
 
+# Helper class for dealing with SVN metadata
+class SVNRevMap(object):
+    RECORD_SZ = 24
+    def __init__(self, filename):
+	self.fd = file(filename, "rb")
+	size = os.stat(filename)[6]
+	self.nrecords = size / self.RECORD_SZ
+
+    def __getitem__(self, index):
+	if index >= self.nrecords:
+	    raise IndexError
+	return self.get_record(index)[0]
+
+    def __len__(self):
+	return self.nrecords
+
+    def get_record(self, index):
+	self.fd.seek(index * self.RECORD_SZ)
+	record = self.fd.read(self.RECORD_SZ)
+	return self.parse_record(record)
+
+    def parse_record(self, record):
+	record = struct.unpack("!I20B", record)
+	rev = record[0]
+	hash = map(lambda x: "%02x" % x, record[1:])
+	hash = ''.join(hash)
+	return rev, hash
+
 class SvnPlugin(YapCore):
     "Allow yap to interoperate with Subversion repositories"
+
+    revpat = re.compile('^r(\d+)$')
+
     def _get_root(self, url):
         root = get_output("svn info %s 2>/dev/null | gawk '/Repository Root:/{print $3}'" % url)
         if not root:
@@ -306,3 +340,36 @@ class SvnPlugin(YapCore):
         url = '/'.join((url[0], lhs))
         self._configure_repo(url)
         run_safely("git update-ref -d %s %s" % (rhs, rev[0]))
+
+    # We are intentionally overriding a yap utility function
+    def _resolve_rev(self, *args, **flags):
+        rev = None
+        if args:
+            m = self.revpat.match(args[0])
+            if m is not None:
+                revnum = int(m.group(1))
+                rev = get_output("git svn find-rev r%d 2>/dev/null" % revnum)
+
+                if not rev:
+                    gitdir = get_output("git rev-parse --git-dir")
+                    assert gitdir
+                    revmaps = os.path.join(gitdir[0], "svn", "svn",
+                            "*", ".rev_map*")
+                    print revmaps
+                    revmaps = glob.glob(revmaps)
+
+                    for f in revmaps:
+                        rm = SVNRevMap(f)
+                        idx = bisect.bisect_left(rm, revnum)
+                        if idx >= len(rm) or rm[idx] != revnum:
+                            continue
+
+                        revnum, rev = rm.get_record(idx)
+                        if hash == "0" * 40:
+                            continue
+                        break
+                    pass
+
+        if not rev:
+            rev = super(SvnPlugin, self)._resolve_rev(*args, **flags)
+        return rev

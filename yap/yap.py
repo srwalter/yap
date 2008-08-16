@@ -140,6 +140,12 @@ class YapCore(object):
 	files = [ x.replace('\t', ' ').split(' ')[3] for x in files ]
 	return list(set(files))
 
+    def _resolve_rev(self, rev):
+        ref = get_output("git rev-parse --verify %s 2>/dev/null" % rev)
+        if not ref:
+            raise YapError("No such revision: %s" % rev)
+        return ref[0]
+
     def _delete_branch(self, branch, force):
         current = get_output("git symbolic-ref HEAD")
 	if current:
@@ -147,15 +153,13 @@ class YapCore(object):
 	    if branch == current:
 		raise YapError("Can't delete current branch")
 
-        ref = get_output("git rev-parse --verify 'refs/heads/%s'" % branch)
-        if not ref:
-            raise YapError("No such branch: %s" % branch)
-        run_safely("git update-ref -d 'refs/heads/%s' '%s'" % (branch, ref[0]))
+        ref = self._resolve_rev('refs/heads/'+branch)
+        run_safely("git update-ref -d 'refs/heads/%s' '%s'" % (branch, ref))
 
         if not force:
-            name = get_output("git name-rev --name-only '%s'" % ref[0])[0]
+            name = get_output("git name-rev --name-only '%s'" % ref)[0]
             if name == 'undefined':
-                run_command("git update-ref 'refs/heads/%s' '%s'" % (branch, ref[0]))
+                run_command("git update-ref 'refs/heads/%s' '%s'" % (branch, ref))
                 raise YapError("Refusing to delete leaf branch (use -f to force)")
     def _get_pager_cmd(self):
         if 'YAP_PAGER' in os.environ:
@@ -633,6 +637,7 @@ starting at HEAD.
         "[-p] [-r <rev>] <path>..."
         self._check_git()
         rev = flags.get('-r', 'HEAD')
+        rev = self._resolve_rev(rev)
 
 	if '-p' in flags:
 	    flags['-p'] = '-p'
@@ -723,9 +728,7 @@ of history.
         "[-f] <branch>"
         self._check_git()
         self._check_rebasing()
-        ref = get_output("git rev-parse --verify 'refs/heads/%s'" % branch)
-        if not ref:
-            raise YapError("No such branch: %s" % branch)
+        ref = self._resolve_rev('refs/heads/'+branch)
 
 	if '-f' not in flags:
 	    if (self._get_staged_files() 
@@ -743,8 +746,8 @@ of history.
 	    self._stage_one(f)
 
 	idx = get_output("git write-tree")
-	new = get_output("git rev-parse refs/heads/%s" % branch)
-	readtree = "git read-tree --aggressive -u -m HEAD %s %s" % (idx[0], new[0])
+        new = self._resolve_rev('refs/heads/'+branch)
+	readtree = "git read-tree --aggressive -u -m HEAD %s %s" % (idx[0], new)
 	if run_command(readtree):
 	    run_command("git update-index --refresh")
 	    if os.system(readtree):
@@ -776,9 +779,10 @@ operation in spite of this.
         if not head:
             raise YapError("No commit yet; nowhere to point")
 
-        ref = get_output("git rev-parse --verify '%s^{commit}'" % where)
+        ref = self._resolve_rev(where)
+        ref = get_output("git rev-parse --verify '%s^{commit}'" % ref)
         if not ref:
-            raise YapError("Not a valid ref: %s" % where)
+            raise YapError("Not a commit: %s" % where)
 
         if self._get_unstaged_files() or self._get_staged_files():
             raise YapError("You have uncommitted changes.  Commit them first")
@@ -847,9 +851,7 @@ To skip the problematic patch, run \"yap history skip\"."""
         else:
             commit = "HEAD"
 
-        if run_command("git rev-parse --verify '%s'" % commit):
-            raise YapError("Not a valid commit: %s" % commit)
-
+        self._resolve_rev(commit)
         self._check_rebasing()
 
         if subcmd == "amend":
@@ -911,6 +913,7 @@ the commit's author, log message, and a diff of the changes are shown.
     def cmd_show(self, commit="HEAD"):
         "[commit]"
         self._check_git()
+        commit = self._resolve_rev(commit)
         os.system("git show '%s'" % commit)
 
     @short_help("apply the changes in a given commit to the current branch")
@@ -1179,11 +1182,7 @@ commits cannot be made.
         self._check_git()
 
 	branch_name = branch
-	branch = get_output("git rev-parse --verify %s" % branch)
-	if not branch:
-	    raise YapError("No such branch: %s" % branch)
-	branch = branch[0]
-
+        branch = self._resolve_rev(branch)
 	base = get_output("git merge-base HEAD %s" % branch)
 	if not base:
 	    raise YapError("Branch '%s' is not a fork of the current branch"
