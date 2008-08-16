@@ -79,10 +79,14 @@ class YapCore(object):
         return files
 
     def _get_unstaged_files(self):
+        cwd = os.getcwd()
+        cdup = get_output("git rev-parse --show-cdup")
+        assert cdup
+        if cdup[0]:
+            os.chdir(cdup[0])
         files = get_output("git ls-files -m")
-        prefix = get_output("git rev-parse --show-prefix")
-	if prefix:
-	    files = [ os.path.join(prefix[0], x) for x in files ]
+        os.chdir(cwd)
+
         new_files = self._get_new_files()
         if new_files:
             staged = self._get_staged_files()
@@ -99,11 +103,14 @@ class YapCore(object):
         return files
 
     def _get_unmerged_files(self):
+        cwd = os.getcwd()
+        cdup = get_output("git rev-parse --show-cdup")
+        assert cdup
+        if cdup[0]:
+            os.chdir(cdup[0])
 	files = get_output("git ls-files -u")
+        os.chdir(cwd)
 	files = [ x.replace('\t', ' ').split(' ')[3] for x in files ]
-        prefix = get_output("git rev-parse --show-prefix")
-	if prefix:
-	    files = [ os.path.join(prefix[0], x) for x in files ]
 	return list(set(files))
 
     def _delete_branch(self, branch, force):
