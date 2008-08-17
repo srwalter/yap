@@ -350,12 +350,13 @@ class SvnPlugin(YapCore):
                 revnum = int(m.group(1))
                 rev = get_output("git svn find-rev r%d 2>/dev/null" % revnum)
 
-                if not rev:
+                if rev:
+                    rev = rev[0]
+                else:
                     gitdir = get_output("git rev-parse --git-dir")
                     assert gitdir
                     revmaps = os.path.join(gitdir[0], "svn", "svn",
                             "*", ".rev_map*")
-                    print revmaps
                     revmaps = glob.glob(revmaps)
 
                     for f in revmaps:
