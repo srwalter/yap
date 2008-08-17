@@ -929,6 +929,7 @@ branch.
     def cmd_cherry_pick(self, commit, **flags):
         "[-r] <commit>"
         self._check_git()
+        commit = self._resolve_rev(commit)
         if '-r' in flags:
             os.system("git revert '%s'" % commit)
         else:
