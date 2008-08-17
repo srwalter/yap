@@ -172,7 +172,6 @@ class SvnPlugin(YapCore):
             try:
                 fd, tmpfile = tempfile.mkstemp("yap")
                 os.close(fd)
-                print base[0]
                 os.system("git format-patch -k --stdout '%s' > %s"
                         % (base[0], tmpfile))
                 start = get_output("git rev-parse HEAD")
@@ -341,7 +340,33 @@ class SvnPlugin(YapCore):
         self._configure_repo(url)
         run_safely("git update-ref -d %s %s" % (rhs, rev[0]))
 
-    # We are intentionally overriding a yap utility function
+    # We are intentionally overriding yap utility functions
+    def _filter_log(self, commit):
+        commit = super(SvnPlugin, self)._filter_log(commit)
+        if not self._enabled():
+            return commit
+
+        new = []
+        for line in commit:
+            if line.strip().startswith("git-svn-id:"):
+                while not new[-1].strip():
+                    new = new[:-1]
+
+                urlrev = line.strip().split(' ')[1]
+                url, rev = urlrev.split('@')
+                hash = commit[0].split(' ')[1].strip()
+                if self._resolve_rev("r"+rev) != hash:
+                    continue
+
+                root = get_output("git config svn-remote.svn.url")
+                assert root
+                url = url.replace(root[0], '')
+                new.insert(1, "Subversion: r%s %s\n" % (rev, url))
+
+                continue
+            new.append(line)
+        return new
+
     def _resolve_rev(self, *args, **flags):
         rev = None
         if args:
