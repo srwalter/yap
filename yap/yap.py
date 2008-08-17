@@ -169,7 +169,7 @@ class YapCore(object):
         elif 'PAGER' in os.environ:
             return os.environ['PAGER']
         else:
-            return "more"
+            return "less"
 
     def _add_one(self, file):
         self._assert_file_exists(file)
