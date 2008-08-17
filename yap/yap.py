@@ -289,7 +289,6 @@ class YapCore(object):
         fd, tmpfile = tempfile.mkstemp("yap")
         os.close(fd)
 
-
 	if msg is None:
 	    msg_file = os.path.join(repo, 'yap', 'msg')
 	    if os.access(msg_file, os.R_OK):
@@ -309,10 +308,9 @@ class YapCore(object):
 	if not msg:
 	    raise YapError("Refusing to use empty commit message")
 
-	(fd_w, fd_r) = os.popen2("git stripspace > %s" % tmpfile)
-	print >>fd_w, msg,
-	fd_w.close()
-	fd_r.close()
+	fd = os.popen("git stripspace > %s" % tmpfile, 'w')
+	print >>fd, msg,
+	fd.close()
 
         if parent:
 	    parent = ' -p '.join(parent)
