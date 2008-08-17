@@ -64,7 +64,7 @@ class TCommitPlugin(YapCore):
                 branch = args[0]
                 self._remove_branch(branch)
         
-        super(TCommitPlugin, self).cmd_commit(*args, **flags)
+        super(TCommitPlugin, self).cmd_branch(*args, **flags)
 
     def cmd_switch(self, *args, **flags):
 	super(TCommitPlugin, self).cmd_switch(*args, **flags)
