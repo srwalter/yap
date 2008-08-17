@@ -1,11 +1,19 @@
 import yap
 import os
 
-def get_output(cmd):
+def get_output(cmd, strip=True):
     fd = os.popen(cmd)
     output = fd.readlines()
     rc = fd.close()
-    return [x.strip() for x in output]
+    if strip:
+        output = [x.strip() for x in output]
+    return output
+
+def yield_output(cmd):
+    fd = os.popen(cmd)
+    for l in fd.xreadlines():
+        yield l.strip()
+    return
 
 def run_command(cmd):
     rc = os.system("%s > /dev/null 2>&1" % cmd)
