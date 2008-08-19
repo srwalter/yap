@@ -68,6 +68,10 @@ class SvnPlugin(YapCore):
 
     revpat = re.compile('^r(\d+)$')
 
+    def __init__(self, *args, **flags):
+	super(SvnPlugin, self).__init__(*args, **flags)
+	self._svn_next_rev = None
+
     def _get_root(self, url):
         root = get_output("svn info %s 2>/dev/null | gawk '/Repository Root:/{print $3}'" % url)
         if not root:
@@ -355,9 +359,16 @@ class SvnPlugin(YapCore):
                 urlrev = line.strip().split(' ')[1]
                 url, rev = urlrev.split('@')
                 hash = commit[0].split(' ')[1].strip()
-                if self._resolve_svn_rev(int(rev)) != hash:
-                    continue
+		if self._svn_next_rev != hash:
+		    h2 = self._resolve_svn_rev(int(rev))
+		    if h2 != hash:
+			continue
 
+		next_hash = get_output("git rev-parse --verify %s^" % hash)
+		if next_hash:
+		    self._svn_next_rev = next_hash[0]
+		else:
+		    self._svn_next_rev = None
                 root = get_output("git config svn-remote.svn.url")
                 assert root
                 url = url.replace(root[0], '')
