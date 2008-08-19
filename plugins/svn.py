@@ -355,7 +355,7 @@ class SvnPlugin(YapCore):
                 urlrev = line.strip().split(' ')[1]
                 url, rev = urlrev.split('@')
                 hash = commit[0].split(' ')[1].strip()
-                if self._resolve_rev("r"+rev) != hash:
+                if self._resolve_svn_rev(int(rev)) != hash:
                     continue
 
                 root = get_output("git config svn-remote.svn.url")
@@ -367,34 +367,37 @@ class SvnPlugin(YapCore):
             new.append(line)
         return new
 
+    def _resolve_svn_rev(self, revnum):
+	rev = get_output("git svn find-rev r%d 2>/dev/null" % revnum)
+
+	if rev:
+	    return rev[0]
+
+	gitdir = get_output("git rev-parse --git-dir")
+	assert gitdir
+	revmaps = os.path.join(gitdir[0], "svn", "svn",
+		"*", ".rev_map*")
+	revmaps = glob.glob(revmaps)
+
+	for f in revmaps:
+	    rm = SVNRevMap(f)
+	    idx = bisect.bisect_left(rm, revnum)
+	    if idx >= len(rm) or rm[idx] != revnum:
+		continue
+
+	    revnum, rev = rm.get_record(idx)
+	    if hash == "0" * 40:
+		continue
+	    break
+	return rev
+
     def _resolve_rev(self, *args, **flags):
         rev = None
         if args:
             m = self.revpat.match(args[0])
             if m is not None:
                 revnum = int(m.group(1))
-                rev = get_output("git svn find-rev r%d 2>/dev/null" % revnum)
-
-                if rev:
-                    rev = rev[0]
-                else:
-                    gitdir = get_output("git rev-parse --git-dir")
-                    assert gitdir
-                    revmaps = os.path.join(gitdir[0], "svn", "svn",
-                            "*", ".rev_map*")
-                    revmaps = glob.glob(revmaps)
-
-                    for f in revmaps:
-                        rm = SVNRevMap(f)
-                        idx = bisect.bisect_left(rm, revnum)
-                        if idx >= len(rm) or rm[idx] != revnum:
-                            continue
-
-                        revnum, rev = rm.get_record(idx)
-                        if hash == "0" * 40:
-                            continue
-                        break
-                    pass
+		rev = self._resolve_svn_rev(revnum)
 
         if not rev:
             rev = super(SvnPlugin, self)._resolve_rev(*args, **flags)
