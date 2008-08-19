@@ -745,11 +745,11 @@ of history.
 
 	idx = get_output("git write-tree")
         new = self._resolve_rev('refs/heads/'+branch)
-	readtree = "git read-tree --aggressive -u -m HEAD %s %s" % (idx[0], new)
-	if run_command(readtree):
-	    run_command("git update-index --refresh")
-	    if os.system(readtree):
-		raise YapError("Failed to switch")
+
+	run_command("git update-index --refresh")
+	readtree = "git read-tree -v --aggressive -u -m HEAD %s %s" % (idx[0], new)
+	if os.system(readtree):
+	    raise YapError("Failed to switch")
         run_safely("git symbolic-ref HEAD refs/heads/%s" % branch)
 
 	if '-f' not in flags:
