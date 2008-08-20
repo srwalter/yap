@@ -70,17 +70,25 @@ class YapCore(object):
         prefix = get_output("git rev-parse --show-prefix")
         if not prefix:
             return path
-        prefix = os.path.split(prefix[0])
 
-        # strip empty components from prefix
-        tmp = []
-        for x in prefix:
-            if not x:
-                continue
-            tmp.append(x)
-        prefix = tmp
+	prefix = [ prefix[0] ]
+	while True:
+	    head, tail = os.path.split(prefix[0])
+	    if not head:
+		break
+	    prefix[0] = head
+	    if tail:
+		prefix.insert(1, tail)
 
-        path = os.path.split(path)
+	path = [ path ]
+	while True:
+	    head, tail = os.path.split(path[0])
+	    if not head:
+		break
+	    path[0] = head
+	    if tail:
+		path.insert(1, tail)
+
         common = 0
         for a, b in zip(prefix, path):
             if a != b:
