@@ -95,7 +95,7 @@ class SvnPlugin(YapCore):
 
     def _create_tagged_blob(self):
 	keys = dict()
-	for i in get_output("git config --list | grep ^svn-remote.svn"):
+	for i in get_output("git config --list | grep ^svn-remote."):
 	    k, v = i.split('=')
 	    keys[k] = v
 	blob = RepoBlob(keys)
