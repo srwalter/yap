@@ -399,6 +399,20 @@ class YapCore(object):
 		continue
 	return val
 
+    def _filter_log(self, commit):
+        return commit
+
+    def _check_rename(self, rev, path):
+        renames = get_output("git diff-tree -C -M --diff-filter=R %s %s^"
+                % (rev, rev))
+        for r in renames:
+            r = r.replace('\t', ' ')
+            fields = r.split(' ')
+            mode1, mode2, hash1, hash2, rename, dst, src = fields
+            if dst == path:
+                return src
+        return None
+
     @short_help("make a local copy of an existing repository")
     @long_help("""
 The first argument is a URL to the existing repository.  This can be an
@@ -644,17 +658,36 @@ starting at HEAD.
         self._check_git()
         rev = flags.get('-r', 'HEAD')
         rev = self._resolve_rev(rev)
+        paths = list(paths)
 
 	if '-p' in flags:
 	    flags['-p'] = '-p'
 
-	if len(paths) == 1:
-	    follow = "--follow"
-	else:
-	    follow = ""
-        paths = ' '.join(paths)
-	os.system("git log -M -C %s %s '%s' -- %s"
-		% (follow, flags.get('-p', '--name-status'), rev, paths))
+        try:
+            pager = os.popen(self._get_pager_cmd(), 'w')
+            rename = False
+            while True:
+                for hash in yield_output("git rev-list '%s' -- %s"
+                        % (rev, ' '.join(paths))):
+                    commit = get_output("git show -M -C %s %s"
+                            % (flags.get('-p', '--name-status'), hash),
+                            strip=False)
+                    commit = self._filter_log(commit)
+                    print >>pager, ''.join(commit)
+
+                    # Check for renames
+                    if len(paths) == 1:
+                        src = self._check_rename(hash, paths[0])
+                        if src is not None:
+                            paths[0] = src
+                            rename = True
+                            rev = hash+"^"
+                            break
+                if not rename:
+                    break
+                rename = False
+        except (IOError, KeyboardInterrupt):
+            pass
 
     @short_help("show staged, unstaged, or all uncommitted changes")
     @long_help("""

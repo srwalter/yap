@@ -68,6 +68,10 @@ class SvnPlugin(YapCore):
 
     revpat = re.compile('^r(\d+)$')
 
+    def __init__(self, *args, **flags):
+	super(SvnPlugin, self).__init__(*args, **flags)
+	self._svn_next_rev = None
+
     def _get_root(self, url):
         root = get_output("svn info %s 2>/dev/null | gawk '/Repository Root:/{print $3}'" % url)
         if not root:
@@ -172,7 +176,6 @@ class SvnPlugin(YapCore):
             try:
                 fd, tmpfile = tempfile.mkstemp("yap")
                 os.close(fd)
-                print base[0]
                 os.system("git format-patch -k --stdout '%s' > %s"
                         % (base[0], tmpfile))
                 start = get_output("git rev-parse HEAD")
@@ -341,35 +344,71 @@ class SvnPlugin(YapCore):
         self._configure_repo(url)
         run_safely("git update-ref -d %s %s" % (rhs, rev[0]))
 
-    # We are intentionally overriding a yap utility function
+    # We are intentionally overriding yap utility functions
+    def _filter_log(self, commit):
+        commit = super(SvnPlugin, self)._filter_log(commit)
+        if not self._enabled():
+            return commit
+
+        new = []
+        for line in commit:
+            if line.strip().startswith("git-svn-id:"):
+                while not new[-1].strip():
+                    new = new[:-1]
+
+                urlrev = line.strip().split(' ')[1]
+                url, rev = urlrev.split('@')
+                hash = commit[0].split(' ')[1].strip()
+		if self._svn_next_rev != hash:
+		    h2 = self._resolve_svn_rev(int(rev))
+		    if h2 != hash:
+			continue
+
+		next_hash = get_output("git rev-parse --verify %s^" % hash)
+		if next_hash:
+		    self._svn_next_rev = next_hash[0]
+		else:
+		    self._svn_next_rev = None
+                root = get_output("git config svn-remote.svn.url")
+                assert root
+                url = url.replace(root[0], '')
+                new.insert(1, "Subversion: r%s %s\n" % (rev, url))
+
+                continue
+            new.append(line)
+        return new
+
+    def _resolve_svn_rev(self, revnum):
+	rev = get_output("git svn find-rev r%d 2>/dev/null" % revnum)
+
+	if rev:
+	    return rev[0]
+
+	gitdir = get_output("git rev-parse --git-dir")
+	assert gitdir
+	revmaps = os.path.join(gitdir[0], "svn", "svn",
+		"*", ".rev_map*")
+	revmaps = glob.glob(revmaps)
+
+	for f in revmaps:
+	    rm = SVNRevMap(f)
+	    idx = bisect.bisect_left(rm, revnum)
+	    if idx >= len(rm) or rm[idx] != revnum:
+		continue
+
+	    revnum, rev = rm.get_record(idx)
+	    if hash == "0" * 40:
+		continue
+	    break
+	return rev
+
     def _resolve_rev(self, *args, **flags):
         rev = None
         if args:
             m = self.revpat.match(args[0])
             if m is not None:
                 revnum = int(m.group(1))
-                rev = get_output("git svn find-rev r%d 2>/dev/null" % revnum)
-
-                if rev:
-                    rev = rev[0]
-                else:
-                    gitdir = get_output("git rev-parse --git-dir")
-                    assert gitdir
-                    revmaps = os.path.join(gitdir[0], "svn", "svn",
-                            "*", ".rev_map*")
-                    revmaps = glob.glob(revmaps)
-
-                    for f in revmaps:
-                        rm = SVNRevMap(f)
-                        idx = bisect.bisect_left(rm, revnum)
-                        if idx >= len(rm) or rm[idx] != revnum:
-                            continue
-
-                        revnum, rev = rm.get_record(idx)
-                        if hash == "0" * 40:
-                            continue
-                        break
-                    pass
+		rev = self._resolve_svn_rev(revnum)
 
         if not rev:
             rev = super(SvnPlugin, self)._resolve_rev(*args, **flags)
