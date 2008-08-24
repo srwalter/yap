@@ -1305,7 +1305,8 @@ commits cannot be made.
 		raise YapError("Sorry, no help for '%s'.  Ask Steven." % cmd)
 
             print >>sys.stderr, "The '%s' command" % oldcmd
-            print >>sys.stderr, "\tyap %s %s" % (oldcmd, attr.__doc__)
+	    doc = self._get_attr(cmd, "__doc__")
+            print >>sys.stderr, "\tyap %s %s" % (oldcmd, doc)
             print >>sys.stderr, "%s" % help
             return
 
