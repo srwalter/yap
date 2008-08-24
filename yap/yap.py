@@ -1298,14 +1298,14 @@ commits cannot be made.
             except AttributeError:
                 raise YapError("No such command: %s" % cmd)
 
-            try:
-		help = self._get_attr(cmd, "long_help")
-            except AttributeError:
-		raise
-		raise YapError("Sorry, no help for '%s'.  Ask Steven." % cmd)
+            help = self._get_attr(cmd, "long_help")
+            if help is None:
+		raise YapError("Sorry, no help for '%s'.  Ask Steven." % oldcmd)
 
             print >>sys.stderr, "The '%s' command" % oldcmd
 	    doc = self._get_attr(cmd, "__doc__")
+            if doc is None:
+                doc = ""
             print >>sys.stderr, "\tyap %s %s" % (oldcmd, doc)
             print >>sys.stderr, "%s" % help
             return
@@ -1320,9 +1320,8 @@ commits cannot be made.
             if not callable(attr):
                 continue
 
-            try:
-                short_msg = self._get_attr(name, "short_help")
-            except AttributeError:
+            short_msg = self._get_attr(name, "short_help")
+            if short_msg is None:
 		continue
 
             name = name.replace('cmd_', '')
