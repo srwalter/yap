@@ -444,7 +444,7 @@ a second argument.
         branch = None
         if not run_command("git rev-parse --verify refs/remotes/origin/HEAD"):
             hash = get_output("git rev-parse refs/remotes/origin/HEAD")[0]
-            for b in get_output("git for-each-ref --format='%(refname)' 'refs/remotes/origin/*'"):
+            for b in get_output("git for-each-ref --format='%(refname)' 'refs/remotes/origin'"):
                 if get_output("git rev-parse %s" % b)[0] == hash:
                     branch = b
                     break
@@ -452,7 +452,7 @@ a second argument.
             if not run_command("git rev-parse --verify refs/remotes/origin/master"):
                 branch = "refs/remotes/origin/master"
         if branch is None:
-            branch = get_output("git for-each-ref --format='%(refname)' 'refs/remotes/origin/*'")
+            branch = get_output("git for-each-ref --format='%(refname)' 'refs/remotes/origin'")
             branch = branch[0]
 
         hash = get_output("git rev-parse %s" % branch)
@@ -744,7 +744,7 @@ in spite of this.
             run_safely("git update-ref 'refs/heads/%s' '%s'" % (branch, ref[0]))
 
         current = get_output("git symbolic-ref HEAD")
-        branches = get_output("git for-each-ref --format='%(refname)' 'refs/heads/*'")
+        branches = get_output("git for-each-ref --format='%(refname)' 'refs/heads'")
         for b in branches:
             if current and b == current[0]:
                 print "* ",
@@ -993,7 +993,7 @@ a previously added repository.
                 raise YapError("No such repository: %s" % flags['-d'])
             os.system("git config --unset remote.%s.url" % flags['-d'])
             os.system("git config --unset remote.%s.fetch" % flags['-d'])
-            for b in get_output("git for-each-ref --format='%(refname)' 'refs/remotes/origin/*'"):
+            for b in get_output("git for-each-ref --format='%(refname)' 'refs/remotes/origin'"):
 		hash = get_output("git rev-parse %s" % b)
 		assert hash
 		run_safely("git update-ref -d %s %s" % (b, hash[0]))
@@ -1008,7 +1008,7 @@ a previously added repository.
             print "%s" % remote
             print "    URL:      %s" % url
             first = True
-            for b in get_output("git for-each-ref --format='%%(refname)' 'refs/remotes/%s/*'" % remote):
+            for b in get_output("git for-each-ref --format='%%(refname)' 'refs/remotes/%s'" % remote):
                 b = b.replace('refs/remotes/', '')
                 if first:
                     branches = "Branches: "
