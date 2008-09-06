@@ -537,7 +537,7 @@ flag can be used to unstage all staged changes at once.
 	    files = self._get_staged_files()
 
         if not files:
-            raise TypeError
+            raise YapError("Nothing to do")
         
         for f in files:
             self._unstage_one(f)
