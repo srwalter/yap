@@ -379,11 +379,7 @@ class SvnPlugin(YapCore):
         return new
 
     def _resolve_svn_rev(self, revnum):
-	rev = get_output("git svn find-rev r%d 2>/dev/null" % revnum)
-
-	if rev:
-	    return rev[0]
-
+	rev = None
 	gitdir = get_output("git rev-parse --git-dir")
 	assert gitdir
 	revmaps = os.path.join(gitdir[0], "svn", "svn",
@@ -400,6 +396,11 @@ class SvnPlugin(YapCore):
 	    if hash == "0" * 40:
 		continue
 	    break
+
+	if not rev:
+	    rev = get_output("git svn find-rev r%d 2>/dev/null" % revnum)
+	if not rev:
+	    rev = None
 	return rev
 
     def _resolve_rev(self, *args, **flags):
