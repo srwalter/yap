@@ -254,7 +254,8 @@ class YapCore(object):
         if '-d' not in flags and self._get_unstaged_files():
             if '-a' not in flags and self._get_staged_files():
                 raise YapError("Staged and unstaged changes present.  Specify what to commit")
-            os.system("git diff-files -p | git apply --cached")
+	    cdup = self._get_cdup()
+            os.system("git diff-files -p | (cd %s; git apply --cached)" % cdup)
             for f in self._get_new_files():
                 self._stage_one(f)
 
@@ -779,7 +780,8 @@ of history.
 
 	staged = bool(self._get_staged_files())
 
-	run_command("git diff-files -p | git apply --cached")
+	cdup = self._get_cdup()
+	run_command("git diff-files -p | (cd %s; git apply --cached)" % cdup)
 	for f in self._get_new_files():
 	    self._stage_one(f)
 
