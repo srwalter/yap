@@ -594,7 +594,8 @@ editing each file again.
         self._check_git()
         if '-a' in flags:
 	    self._unstage_all()
-	    run_safely("git checkout-index -u -f -a")
+	    cdup = self._get_cdup()
+	    run_safely("(cd %s; git checkout-index -u -f -a)" % cdup)
 	    self._clear_state()
 	    self.cmd_status()
             return
