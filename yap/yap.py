@@ -115,10 +115,8 @@ class YapCore(object):
 
     def _get_unstaged_files(self):
         cwd = os.getcwd()
-        cdup = get_output("git rev-parse --show-cdup")
-        assert cdup
-        if cdup[0]:
-            os.chdir(cdup[0])
+	cdup = self._get_cdup()
+	os.chdir(cdup)
         files = get_output("git ls-files -m")
         os.chdir(cwd)
 
@@ -139,10 +137,8 @@ class YapCore(object):
 
     def _get_unmerged_files(self):
         cwd = os.getcwd()
-        cdup = get_output("git rev-parse --show-cdup")
-        assert cdup
-        if cdup[0]:
-            os.chdir(cdup[0])
+	cdup = self._get_cdup()
+	os.chdir(cdup)
 	files = get_output("git ls-files -u")
         os.chdir(cwd)
 	files = [ x.replace('\t', ' ').split(' ')[3] for x in files ]
@@ -203,18 +199,21 @@ class YapCore(object):
 	    raise YapError("Refusing to stage conflicted file: %s" % file)
         run_safely("git update-index --add '%s'" % file)
 
+    def _get_cdup(self):
+	cdup = get_output("git rev-parse --show-cdup")
+	assert cdup
+	if cdup[0]:
+	    cdup = cdup[0]
+	else:
+	    cdup = '.'
+	return cdup
+
     def _unstage_one(self, file):
         self._assert_file_exists(file)
         if run_command("git rev-parse HEAD"):
             rc = run_command("git update-index --force-remove '%s'" % file)
         else:
-            cdup = get_output("git rev-parse --show-cdup")
-            assert cdup
-            if cdup[0]:
-                cdup = cdup[0]
-            else:
-                cdup = '.'
-
+	    cdup = self._get_cdup()
             rc = run_command("git diff-index --cached -p HEAD '%s' | (cd %s; git apply -R --cached)" % (file, cdup))
         if rc:
             raise YapError("Failed to unstage")
