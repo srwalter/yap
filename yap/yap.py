@@ -255,7 +255,7 @@ class YapCore(object):
             if '-a' not in flags and self._get_staged_files():
                 raise YapError("Staged and unstaged changes present.  Specify what to commit")
 	    cdup = self._get_cdup()
-            os.system("git diff-files -p | (cd %s; git apply --cached)" % cdup)
+	    run_command("(cd %s; git add -u)" % cdup)
             for f in self._get_new_files():
                 self._stage_one(f)
 
@@ -593,9 +593,9 @@ editing each file again.
         "(-a | <file>)"
         self._check_git()
         if '-a' in flags:
-	    self._unstage_all()
 	    cdup = self._get_cdup()
-	    run_safely("(cd %s; git checkout-index -u -f -a)" % cdup)
+	    run_command("(cd %s; git add -u)" % cdup)
+	    os.system("git read-tree -v --aggressive -u -m HEAD")
 	    self._clear_state()
 	    self.cmd_status()
             return
@@ -783,7 +783,7 @@ of history.
 	staged = bool(self._get_staged_files())
 
 	cdup = self._get_cdup()
-	run_command("git diff-files -p | (cd %s; git apply --cached)" % cdup)
+	run_command("(cd %s; git add -u)" % cdup)
 	for f in self._get_new_files():
 	    self._stage_one(f)
 
