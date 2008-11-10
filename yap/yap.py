@@ -413,6 +413,22 @@ class YapCore(object):
                 return src
         return None
 
+    def _expand_directories(self, files):
+	files = list(files)
+	for i, f in enumerate(files[:]):
+	    if not os.path.isdir(f):
+		continue
+
+	    del files[i]
+	    fd = os.popen("find %s -type f" % f)
+	    for x in fd.xreadlines():
+		x = x.strip()
+		if '.git' in x.split(os.path.sep):
+		    continue
+		files.append(x)
+	return files
+        
+
     @short_help("make a local copy of an existing repository")
     @long_help("""
 The first argument is a URL to the existing repository.  This can be an
@@ -484,6 +500,7 @@ reverse the effects of this command, see 'rm'.
         if not files:
             raise TypeError
         
+	files = self._expand_directories(files)
         for f in files:
             self._add_one(f)
         self.cmd_status()
@@ -519,19 +536,7 @@ files will show as "staged changes" in the output of 'status'.
         if not files:
             raise TypeError
         
-	files = list(files)
-	for i, f in enumerate(files[:]):
-	    if not os.path.isdir(f):
-		continue
-
-	    del files[i]
-	    fd = os.popen("find %s -type f" % f)
-	    for x in fd.xreadlines():
-		x = x.strip()
-		if '.git' in x.split(os.path.sep):
-		    continue
-		files.append(x)
-        
+	files = self._expand_directories(files)
         for f in files:
             self._stage_one(f)
         self.cmd_status()
