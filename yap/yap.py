@@ -519,6 +519,19 @@ files will show as "staged changes" in the output of 'status'.
         if not files:
             raise TypeError
         
+	files = list(files)
+	for i, f in enumerate(files[:]):
+	    if not os.path.isdir(f):
+		continue
+
+	    del files[i]
+	    fd = os.popen("find %s -type f" % f)
+	    for x in fd.xreadlines():
+		x = x.strip()
+		if '.git' in x.split(os.path.sep):
+		    continue
+		files.append(x)
+        
         for f in files:
             self._stage_one(f)
         self.cmd_status()
