@@ -47,6 +47,8 @@ class WorkdirPlugin(YapCore):
                 continue
 
     def cmd_workdir(self, branch, workdir=None):
+        "<branch> [workdir]"
+
         self._check_git()
 
         branches = get_output("git for-each-ref --format='%(refname)' 'refs/heads'")
@@ -89,6 +91,8 @@ class WorkdirPlugin(YapCore):
         os.chdir("..")
         run_safely("git symbolic-ref HEAD refs/heads/%s" % branch)
         self.cmd_revert(**{'-a': 1})
+
+        print "Workdir created at %s for branch %s" % (workdir, branch)
 
     def cmd_switch(self, branch, *args, **flags):
         self._check_git()
