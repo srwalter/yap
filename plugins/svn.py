@@ -210,9 +210,36 @@ class SvnPlugin(YapCore):
 	    master = get_output("git rev-parse --verify refs/heads/master 2>/dev/null")
 	    if master:
 		run_safely("git update-ref -d refs/heads/master %s" % master[0])
+
+    def _lock_svn(self):
+	repo = get_output('git rev-parse --git-dir')[0]
+	dir = os.path.join(repo, 'yap')
+	fd, tmplock = tempfile.mkstemp("yap", dir=dir)
+	try:
+	    os.close(fd)
+
+	    lockfile = os.path.join(dir, 'svn-lock')
+	    try:
+		os.link(tmplock, lockfile)
+	    except OSError:
+		raise YapError("A subversion operation is already in progress")
+	finally:
+	    os.unlink(tmplock)
+
+    def _unlock_svn(self):
+	repo = get_output('git rev-parse --git-dir')[0]
+	dir = os.path.join(repo, 'yap')
+	lockfile = os.path.join(dir, 'svn-lock')
+
+	try:
+	    os.unlink(lockfile)
+	except OSError:
+	    pass
     
     def _fetch_svn(self):
+	self._lock_svn()
 	os.system("git svn fetch svn")
+	self._unlock_svn()
 	self._create_tagged_blob()
 	self._cleanup_branches()
 
