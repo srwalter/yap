@@ -14,6 +14,11 @@ class WorkdirPlugin(YapCore):
     def _unlock_branch(self, branch):
         repo = get_output('git rev-parse --git-dir')[0]
         dir = os.path.join(repo, 'yap', 'lock')
+        try:
+            os.mkdir(dir)
+        except OSError:
+            pass
+
         lockfile = os.path.join(dir, branch.replace('/', '\/'))
 
         try:
