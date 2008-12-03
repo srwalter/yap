@@ -35,24 +35,27 @@ class WorkdirPlugin(YapCore):
             pass
 
         fd, tmplock = tempfile.mkstemp("yap", dir=dir)
-        os.write(fd, locked_by)
-        os.close(fd)
-        while True:
-            lockfile = os.path.join(dir, branch.replace('/', '\/'))
-            try:
-                os.link(tmplock, lockfile)
-                break
-            except OSError, e:
+	try:
+	    os.write(fd, locked_by)
+	    os.close(fd)
+	    while True:
+		lockfile = os.path.join(dir, branch.replace('/', '\/'))
 		try:
-		    fd = file(lockfile)
-		except:
-		    raise e
-                user = fd.readline()
-                # If the workdir has been deleted, break his lock
-                if os.access(user, os.R_OK):
-                    raise YapError("That branch is being used by an existing workdir")
-                os.unlink(lockfile)
-                continue
+		    os.link(tmplock, lockfile)
+		    break
+		except OSError, e:
+		    try:
+			fd = file(lockfile)
+		    except:
+			raise e
+		    user = fd.readline()
+		    # If the workdir has been deleted, break his lock
+		    if os.access(user, os.R_OK):
+			raise YapError("That branch is being used by an existing workdir")
+		    os.unlink(lockfile)
+		    continue
+	finally:
+	    os.unlink(tmplock)
 
     def cmd_workdir(self, branch, workdir=None):
         "<branch> [workdir]"
