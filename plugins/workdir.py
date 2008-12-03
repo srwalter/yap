@@ -11,6 +11,16 @@ class WorkdirPlugin(YapCore):
     def __init__(self, *args, **flags):
 	super(WorkdirPlugin, self).__init__(*args, **flags)
 
+    def _unlock_branch(self, branch):
+        repo = get_output('git rev-parse --git-dir')[0]
+        dir = os.path.join(repo, 'yap', 'lock')
+        lockfile = os.path.join(dir, branch.replace('/', '\/'))
+
+        try:
+            os.unlink(lockfile)
+        except OSError:
+            pass
+
     def _lock_branch(self, branch, locked_by):
         repo = get_output('git rev-parse --git-dir')[0]
         dir = os.path.join(repo, 'yap', 'lock')
@@ -83,6 +93,15 @@ class WorkdirPlugin(YapCore):
     def cmd_switch(self, branch, *args, **flags):
         self._check_git()
 
+        current = get_output("git symbolic-ref HEAD")[0]
+
         repo = get_output('git rev-parse --git-dir')[0]
         self._lock_branch(branch, repo)
-        super(WorkdirPlugin, self).cmd_switch(branch, *args, **flags)
+
+        try:
+            super(WorkdirPlugin, self).cmd_switch(branch, *args, **flags)
+        except:
+            self._unlock_branch(branch)
+            raise
+
+        self._unlock_branch(current.replace('refs/heads/', ''))
