@@ -34,7 +34,7 @@ class WorkdirPlugin(YapCore):
         except OSError:
             pass
 
-        fd, tmplock = tempfile.mkstemp("yap")
+        fd, tmplock = tempfile.mkstemp("yap", dir=dir)
         os.write(fd, locked_by)
         os.close(fd)
         while True:
@@ -42,8 +42,11 @@ class WorkdirPlugin(YapCore):
             try:
                 os.link(tmplock, lockfile)
                 break
-            except OSError:
-                fd = file(lockfile)
+            except OSError, e:
+		try:
+		    fd = file(lockfile)
+		except:
+		    raise e
                 user = fd.readline()
                 # If the workdir has been deleted, break his lock
                 if os.access(user, os.R_OK):
