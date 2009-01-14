@@ -93,7 +93,7 @@ class WorkdirPlugin(YapCore):
         os.chdir(".git")
 
         for x in ["config", "refs", "logs/refs", "objects", "info",
-                  "hooks", "packed-refs", "remotes", "svn"]:
+                  "hooks", "packed-refs", "remotes", "yap", "svn"]:
             if os.path.dirname(x):
                 os.makedirs(os.path.dirname(x))
             os.symlink(os.path.join(repo, x), x)
