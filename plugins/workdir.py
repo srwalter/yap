@@ -57,6 +57,13 @@ class WorkdirPlugin(YapCore):
 	finally:
 	    os.unlink(tmplock)
 
+    def _get_repodir(self):
+        repo = get_output('git rev-parse --git-dir')[0]
+	if not repo.startswith('/'):
+	    repo = os.path.join(os.getcwd(), repo)
+        repodir = os.path.dirname(repo)
+	return repodir
+
     def cmd_workdir(self, branch, workdir=None):
         "<branch> [workdir]"
 
@@ -67,10 +74,8 @@ class WorkdirPlugin(YapCore):
             raise YapError("Not a branch: %s" % branch)
 
         current = get_output("git symbolic-ref HEAD")[0]
-
-        repo = get_output('git rev-parse --git-dir')[0]
-        repo = os.path.join(os.getcwd(), repo)
-        repodir = os.path.dirname(repo)
+	repodir = self._get_repodir()
+	repo = os.path.join(repodir, '.git')
         if workdir is None:
             repoparent, reponame = os.path.split(repodir)
             workdir = os.path.join(repoparent, "%s-%s" % (reponame, branch))
@@ -110,8 +115,8 @@ class WorkdirPlugin(YapCore):
 
         current = get_output("git symbolic-ref HEAD")[0]
 
-        repo = get_output('git rev-parse --git-dir')[0]
-        self._lock_branch(branch, repo)
+	repodir = self._get_repodir()
+        self._lock_branch(branch, repodir)
 
         try:
             super(WorkdirPlugin, self).cmd_switch(branch, *args, **flags)
