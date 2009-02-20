@@ -110,6 +110,19 @@ class WorkdirPlugin(YapCore):
 
         print "Workdir created at %s for branch %s" % (workdir, branch)
 
+    def cmd_branch(self, *args, **flags):
+	if '-d' in flags:
+	    branch = flags['-d']
+	    repodir = self._get_repodir()
+	    self._lock_branch(branch, repodir)
+	else:
+	    branch = None
+
+	super(WorkdirPlugin, self).cmd_branch(*args, **flags)
+
+	if branch:
+	    self._unlock_branch(branch)
+
     def cmd_switch(self, branch, *args, **flags):
         self._check_git()
 
