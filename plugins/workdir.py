@@ -118,10 +118,11 @@ class WorkdirPlugin(YapCore):
 	else:
 	    branch = None
 
-	super(WorkdirPlugin, self).cmd_branch(*args, **flags)
-
-	if branch:
-	    self._unlock_branch(branch)
+	try:
+	    super(WorkdirPlugin, self).cmd_branch(*args, **flags)
+	finally:
+	    if branch:
+		self._unlock_branch(branch)
 
     def cmd_switch(self, branch, *args, **flags):
         self._check_git()
