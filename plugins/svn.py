@@ -374,8 +374,6 @@ class SvnPlugin(YapCore):
     # We are intentionally overriding yap utility functions
     def _filter_log(self, commit):
         commit = super(SvnPlugin, self)._filter_log(commit)
-        if not self._enabled():
-            return commit
 
         new = []
         for line in commit:
@@ -409,9 +407,20 @@ class SvnPlugin(YapCore):
 	rev = None
 	gitdir = get_output("git rev-parse --git-dir")
 	assert gitdir
-	revmaps = os.path.join(gitdir[0], "svn", "svn",
-		"*", ".rev_map*")
-	revmaps = glob.glob(revmaps)
+
+	# Work with whateven svn remote is configured
+	remotes = get_output("git config --get-regexp 'svn-remote.*.fetch'")
+	assert remotes
+
+	revmaps = []
+	for remote in remotes:
+	    remote = remote.split(' ')
+	    remote = remote[1].split(':')
+	    remote = remote[1].split('/')
+	    remote = remote[2]
+	    path = os.path.join(gitdir[0], "svn", remote,
+		    "*", ".rev_map*")
+	    revmaps += glob.glob(path)
 
 	for f in revmaps:
 	    rm = SVNRevMap(f)
