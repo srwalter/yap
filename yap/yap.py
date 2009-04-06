@@ -486,6 +486,7 @@ No files are added nor commits made.
 """)
     def cmd_init(self):
         os.system("git init")
+	os.mkdir(os.path.join(".git", "yap"))
 
     @short_help("add a new file to the repository")
     @long_help("""
