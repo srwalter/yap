@@ -690,7 +690,7 @@ starting at HEAD.
             while True:
                 for hash in yield_output("git rev-list '%s' -- %s"
                         % (rev, ' '.join(paths))):
-                    commit = get_output("git show -M -C %s %s"
+                    commit = get_output("git show --date=local -M -C %s %s"
                             % (flags.get('-p', '--name-status'), hash),
                             strip=False)
                     commit = self._filter_log(commit)
