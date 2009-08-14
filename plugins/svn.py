@@ -93,7 +93,7 @@ class SvnPlugin(YapCore):
 	    os.system("git config svn-remote.svn.branches %s/*:refs/remotes/svn/*" % branches)
         tags = trunk.replace('trunk', 'tags')
 	if tags != trunk:
-	    os.system("git config svn-remote.svn.tags %s/*:refs/tags/*" % tags)
+	    os.system("git config svn-remote.svn.tags %s/*:refs/remotes/svn/tags/*" % tags)
         self.cmd_repo("svn", url)
         os.system("git config yap.svn.enabled 1")
 
