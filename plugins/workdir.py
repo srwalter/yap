@@ -15,7 +15,7 @@ class WorkdirPlugin(YapCore):
         repo = get_output('git rev-parse --git-dir')[0]
         dir = os.path.join(repo, 'yap', 'lock')
         try:
-            os.mkdir(dir)
+            os.makedirs(dir)
         except OSError:
             pass
 
@@ -30,7 +30,7 @@ class WorkdirPlugin(YapCore):
         repo = get_output('git rev-parse --git-dir')[0]
         dir = os.path.join(repo, 'yap', 'lock')
         try:
-            os.mkdir(dir)
+            os.makedirs(dir)
         except OSError:
             pass
 
