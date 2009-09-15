@@ -448,8 +448,10 @@ a second argument.
     def cmd_clone(self, url, directory=None):
         "<url> [directory]"
 
-        if '://' not in url and url[0] != '/':
-            url = os.path.join(os.getcwd(), url)
+	if '://' not in url:
+	    if url[0] != '/':
+		url = os.path.join(os.getcwd(), url)
+	    self._assert_file_exists(url)
 
         url = url.rstrip('/')
         if directory is None:
@@ -1159,7 +1161,9 @@ argument.
                 repo = remote[0]
         if repo is None:
             raise YapError("No tracking branch configured; specify a repository")
-	os.system("git fetch %s" % repo)
+	rc = os.system("git fetch %s" % repo)
+	if rc:
+	    raise YapError("Fetch failed")
 
     @short_help("update the current branch relative to its tracking branch")
     @long_help("""
