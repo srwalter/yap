@@ -562,6 +562,7 @@ flag can be used to unstage all staged changes at once.
         self._check_git()
         if '-a' in flags:
 	    files = self._get_staged_files()
+	    files = [ self._repo_path_to_rel(x) for x in files ]
 
         if not files:
             raise YapError("Nothing to do")
