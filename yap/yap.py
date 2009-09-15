@@ -167,13 +167,17 @@ class YapCore(object):
                 raise YapError("Refusing to delete leaf branch (use -f to force)")
     def _get_pager_cmd(self):
         if 'YAP_PAGER' in os.environ:
-            return os.environ['YAP_PAGER']
+            pager = os.environ['YAP_PAGER']
         elif 'GIT_PAGER' in os.environ:
-            return os.environ['GIT_PAGER']
+            pager = os.environ['GIT_PAGER']
         elif 'PAGER' in os.environ:
-            return os.environ['PAGER']
+            pager = os.environ['PAGER']
         else:
-            return "less"
+            pager = "less"
+
+	if not os.isatty(1):
+	    pager = "cat"
+	return pager
 
     def _add_one(self, file):
         self._assert_file_exists(file)
