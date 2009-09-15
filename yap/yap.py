@@ -558,7 +558,6 @@ flag can be used to unstage all staged changes at once.
         if not files:
             raise YapError("Nothing to do")
         
-	files = [ self._repo_path_to_rel(x) for x in files ]
         for f in files:
             self._unstage_one(f)
         self.cmd_status()
