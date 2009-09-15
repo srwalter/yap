@@ -15,6 +15,9 @@ def yield_output(cmd):
         yield l.strip()
     return
 
+def stdout_is_tty():
+    return os.isatty(1)
+
 def run_command(cmd):
     rc = os.system("%s > /dev/null 2>&1" % cmd)
     rc >>= 8

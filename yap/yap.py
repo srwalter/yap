@@ -175,7 +175,7 @@ class YapCore(object):
         else:
             pager = "less"
 
-	if not os.isatty(1):
+	if not stdout_is_tty():
 	    pager = "cat"
 	return pager
 
@@ -687,14 +687,19 @@ starting at HEAD.
 	if '-p' in flags:
 	    flags['-p'] = '-p'
 
+	if stdout_is_tty():
+	    color = "--color"
+	else:
+	    color = ""
+
         try:
             pager = os.popen(self._get_pager_cmd(), 'w')
             rename = False
             while True:
                 for hash in yield_output("git rev-list '%s' -- %s"
                         % (rev, ' '.join(paths))):
-                    commit = get_output("git show --date=local -M -C %s %s"
-                            % (flags.get('-p', '--name-status'), hash),
+                    commit = get_output("git show %s --date=local -M -C %s %s"
+                            % (color, flags.get('-p', '--name-status'), hash),
                             strip=False)
                     commit = self._filter_log(commit)
                     print >>pager, ''.join(commit)
@@ -728,12 +733,17 @@ shown.  The '-d' flag causes only staged changes to be shown.
 
         pager = self._get_pager_cmd()
 
+	if stdout_is_tty():
+	    color = "--color"
+	else:
+	    color = ""
+
         if '-u' in flags:
-            os.system("git diff-files -p | %s" % pager)
+            os.system("git diff-files %s -p | %s" % (color, pager))
         elif '-d' in flags:
-            os.system("git diff-index --cached -p HEAD | %s" % pager)
+            os.system("git diff-index %s --cached -p HEAD | %s" % (color, pager))
         else:
-            os.system("git diff-index -p HEAD | %s" % pager)
+            os.system("git diff-index %s -p HEAD | %s" % (color, pager))
 
     @short_help("list, create, or delete branches")
     @long_help("""
@@ -977,7 +987,13 @@ the commit's author, log message, and a diff of the changes are shown.
         "[commit]"
         self._check_git()
         commit = self._resolve_rev(commit)
-        os.system("git show '%s'" % commit)
+
+	if stdout_is_tty():
+	    color = "--color"
+	else:
+	    color = ""
+
+        os.system("git show %s '%s'" % (color, commit))
 
     @short_help("apply the changes in a given commit to the current branch")
     @long_help("""
