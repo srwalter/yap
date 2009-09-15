@@ -177,6 +177,10 @@ class YapCore(object):
 
 	if not stdout_is_tty():
 	    pager = "cat"
+
+	if os.path.basename(pager) == "less":
+	    pager += " -R"
+
 	return pager
 
     def _add_one(self, file):
