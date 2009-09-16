@@ -1,6 +1,6 @@
 
 from yap.yap import YapCore, YapError
-from yap.util import get_output, takes_options, run_command, run_safely, short_help
+from yap.util import get_output, takes_options, run_command, run_safely, short_help, stdout_is_tty
 
 import os
 import tempfile
@@ -383,7 +383,10 @@ class SvnPlugin(YapCore):
 
                 urlrev = line.strip().split(' ')[1]
                 url, rev = urlrev.split('@')
-                hash = commit[0].split(' ')[1].strip()
+		m = re.search("commit ([0-9a-f]+)", commit[0])
+		if m is None:
+		    continue
+		hash = m.group(1)
 		if self._svn_next_rev != hash:
 		    h2 = self._resolve_svn_rev(int(rev))
 		    if h2 != hash:
@@ -397,7 +400,11 @@ class SvnPlugin(YapCore):
                 root = get_output("git config svn-remote.svn.url")
                 assert root
                 url = url.replace(root[0], '')
-                new.insert(1, "Subversion: r%s %s\n" % (rev, url))
+
+		if stdout_is_tty():
+		    new.insert(1, "\033[32mSubversion: r%s %s\033[0m\n" % (rev, url))
+		else:
+		    new.insert(1, "Subversion: r%s %s\n" % (rev, url))
 
                 continue
             new.append(line)
