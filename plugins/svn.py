@@ -392,7 +392,7 @@ class SvnPlugin(YapCore):
 		    if h2 != hash:
 			continue
 
-		next_hash = get_output("git rev-parse --verify %s^" % hash)
+		next_hash = get_output("git rev-parse --verify %s^ 2>/dev/null" % hash)
 		if next_hash:
 		    self._svn_next_rev = next_hash[0]
 		else:
