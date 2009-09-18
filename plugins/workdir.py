@@ -1,6 +1,6 @@
 
 from yap.yap import YapCore, YapError
-from yap.util import get_output, takes_options, run_safely
+from yap.util import get_output, takes_options, run_safely, long_help
 
 import os
 import tempfile
@@ -64,6 +64,14 @@ class WorkdirPlugin(YapCore):
         repodir = os.path.dirname(repo)
 	return repodir
 
+    @long_help("""
+The first argument is an existing branch of the repository.  This
+command will create a working directory using the contents of that
+branch.  By default, the new working directory will be created in a
+directory adjacent to the current repository, with the branch name
+appended to it; e.g., ../repo-branch.  This path can be overridden by
+specifying a second argument.
+""")
     def cmd_workdir(self, branch, workdir=None):
         "<branch> [workdir]"
 
