@@ -87,26 +87,31 @@ class WorkdirPlugin(YapCore):
             pass
 
         self._lock_branch(branch, workdir)
+	# If we fail after this point, unlock the branch
+	try:
+	    try:
+		os.mkdir(workdir)
+	    except OSError, e:
+		raise YapError("Can't create new workdir: %s (%s)" % (workdir, e))
 
-        try:
-            os.mkdir(workdir)
-        except OSError, e:
-            raise YapError("Can't create new workdir: %s (%s)" % (workdir, e))
+	    os.chdir(workdir)
+	    os.mkdir(".git")
+	    os.chdir(".git")
 
-        os.chdir(workdir)
-        os.mkdir(".git")
-        os.chdir(".git")
+	    for x in ["config", "refs", "logs/refs", "objects", "info",
+		      "hooks", "packed-refs", "remotes", "yap", "svn"]:
+		if os.path.dirname(x):
+		    os.makedirs(os.path.dirname(x))
+		os.symlink(os.path.join(repo, x), x)
 
-        for x in ["config", "refs", "logs/refs", "objects", "info",
-                  "hooks", "packed-refs", "remotes", "yap", "svn"]:
-            if os.path.dirname(x):
-                os.makedirs(os.path.dirname(x))
-            os.symlink(os.path.join(repo, x), x)
-
-        run_safely("cp %s HEAD" % os.path.join(repo, 'HEAD'))
-        os.chdir("..")
-        run_safely("git symbolic-ref HEAD refs/heads/%s" % branch)
-        self.cmd_revert(**{'-a': 1})
+	    run_safely("cp %s HEAD" % os.path.join(repo, 'HEAD'))
+	    os.chdir("..")
+	    run_safely("git symbolic-ref HEAD refs/heads/%s" % branch)
+	    self.cmd_revert(**{'-a': 1})
+	except:
+	    # If we fail, clean up after ourselves
+	    self._unlock_branch(branch)
+	    raise
 
         print "Workdir created at %s for branch %s" % (workdir, branch)
 
