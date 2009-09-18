@@ -186,6 +186,9 @@ class YapCore(object):
     def _add_one(self, file):
         self._assert_file_exists(file)
         x = get_output("git ls-files '%s'" % file)
+	prefix = get_output("git rev-parse --show-prefix")
+	if prefix:
+	    file = os.path.join(prefix[0], file)
         if x != [] or file in self._get_new_files():
             raise YapError("File '%s' already in repository" % file)
         self._add_new_file(file)
