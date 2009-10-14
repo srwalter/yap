@@ -103,7 +103,7 @@ class YapCore(object):
 
     def _get_staged_files(self):
         if run_command("git rev-parse HEAD"):
-            files = get_output("git ls-files --cached")
+            files = get_output("git ls-files --full-name --cached")
         else:
             files = get_output("git diff-index --cached --name-only HEAD")
 	unmerged = self._get_unmerged_files()
