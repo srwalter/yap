@@ -706,8 +706,8 @@ starting at HEAD.
             pager = os.popen(self._get_pager_cmd(), 'w')
             rename = False
             while True:
-                for hash in yield_output("git rev-list '%s' -- %s"
-                        % (rev, ' '.join(paths))):
+                cmd = ['git', 'rev-list', rev, '--' ] + paths
+		for hash in yield_output(cmd):
                     commit = get_output("git show %s --date=local -M -C %s %s"
                             % (color, flags.get('-p', '--name-status'), hash),
                             strip=False)
