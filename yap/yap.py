@@ -414,7 +414,7 @@ class YapCore(object):
         return commit
 
     def _check_rename(self, rev, path):
-        renames = get_output("git diff-tree -C -M --diff-filter=R %s %s^"
+        renames = get_output("git diff-tree -C -M -r --diff-filter=R %s %s^"
                 % (rev, rev))
         for r in renames:
             r = r.replace('\t', ' ')
