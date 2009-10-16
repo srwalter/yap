@@ -1,5 +1,6 @@
 import yap
 import os
+import subprocess
 
 def get_output(cmd, strip=True):
     fd = os.popen(cmd)
@@ -10,7 +11,9 @@ def get_output(cmd, strip=True):
     return output
 
 def yield_output(cmd):
-    fd = os.popen(cmd)
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    fd = p.stdout
+
     for l in fd.xreadlines():
         yield l.strip()
     return
