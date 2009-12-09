@@ -1117,6 +1117,8 @@ To delete a branch on the remote repository, use the -d flag.
         if rhs is None:
             rhs = "refs/heads/%s" % current
 
+        self.cmd_fetch(repo)
+
 	if '-c' not in flags and '-d' not in flags:
 	    if run_command("git rev-parse --verify refs/remotes/%s/%s"
 		    % (repo, rhs.replace('refs/heads/', ''))):
@@ -1127,6 +1129,10 @@ To delete a branch on the remote repository, use the -d flag.
                 assert base
                 if base[0] != hash[0]:
                     raise YapError("Branch not up-to-date with remote.  Update or use -f")
+
+                head = get_output("git rev-parse HEAD")
+                if base[0] == head[0]:
+                    raise YapError("All commits already in remote branch; nothing to do!")
 
 	self._confirm_push(current, rhs, repo)
         if '-f' in flags:
