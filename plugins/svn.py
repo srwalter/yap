@@ -103,7 +103,7 @@ class SvnPlugin(YapCore):
 	    k, v = i.split('=')
 	    keys[k] = v
 	blob = RepoBlob(keys)
-	for b in get_output("git for-each-ref --format='%(refname)' 'refs/remotes/svn/*'"):
+	for b in get_output("git for-each-ref --format='%(refname)' 'refs/remotes/svn'"):
 	    b = b.replace('refs/remotes/svn/', '')
 	    blob.add_metadata(b)
 
@@ -117,10 +117,22 @@ class SvnPlugin(YapCore):
 	for b in get_output("git for-each-ref --format='%(refname)' 'refs/remotes/svn/*@*'"):
 	    head = b.replace('refs/remotes/svn/', '')
 	    path = os.path.join(".git", "svn", "svn", head)
-	    files = os.listdir(path)
-	    for f in files:
-		os.unlink(os.path.join(path, f))
-	    os.rmdir(path)
+            try:
+                files = os.listdir(path)
+                for f in files:
+                    os.unlink(os.path.join(path, f))
+                os.rmdir(path)
+            except OSError:
+                pass
+
+	    path = os.path.join(".git", "svn", "refs", "remotes", "svn", head)
+            try:
+                files = os.listdir(path)
+                for f in files:
+                    os.unlink(os.path.join(path, f))
+                os.rmdir(path)
+            except OSError:
+                pass
 
 	    ref = get_output("git rev-parse %s" % b)
 	    if ref:
@@ -312,9 +324,15 @@ class SvnPlugin(YapCore):
 	    branch = os.path.join(".git", "svn", "svn", b)
 	    os.makedirs(branch)
 	    fd = file(os.path.join(branch, ".rev_map.%s" % blob.uuid), "w")
-
 	    rev, metadata = blob.metadata[b]
 	    fd.write(metadata)
+
+	    branch = os.path.join(".git", "svn", "refs", "remotes", "svn", b)
+	    os.makedirs(branch)
+	    fd = file(os.path.join(branch, ".rev_map.%s" % blob.uuid), "w")
+	    rev, metadata = blob.metadata[b]
+	    fd.write(metadata)
+
 	    run_command("git update-ref refs/remotes/svn/%s %s" % (b, rev))
 
     def cmd_fetch(self, *args, **flags):
@@ -423,10 +441,14 @@ class SvnPlugin(YapCore):
 	for remote in remotes:
 	    remote = remote.split(' ')
 	    remote = remote[1].split(':')
+            refspec = remote[1]
 	    remote = remote[1].split('/')
 	    remote = remote[2]
 	    path = os.path.join(gitdir[0], "svn", remote,
 		    "*", ".rev_map*")
+	    revmaps += glob.glob(path)
+
+	    path = os.path.join(gitdir[0], "svn", refspec, ".rev_map*")
 	    revmaps += glob.glob(path)
 
 	for f in revmaps:
