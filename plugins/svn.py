@@ -458,7 +458,7 @@ class SvnPlugin(YapCore):
 		continue
 
 	    revnum, rev = rm.get_record(idx)
-	    if hash == "0" * 40:
+	    if rev == "0" * 40:
 		continue
 	    break
 
