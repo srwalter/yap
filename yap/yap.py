@@ -829,11 +829,15 @@ of history.
 	for f in self._get_new_files():
 	    self._stage_one(f)
 
+        tree = get_output("git rev-parse HEAD^{tree}")
 	idx = get_output("git write-tree")
         new = self._resolve_rev('refs/heads/'+branch)
 
 	run_command("git update-index --refresh")
-	readtree = "git read-tree -v --aggressive -u -m HEAD %s %s" % (idx[0], new)
+        if tree[0] != idx[0]:
+            readtree = "git read-tree -v --aggressive -u -m HEAD %s %s" % (idx[0], new)
+        else:
+            readtree = "git read-tree -v --aggressive -u -m %s %s" % (idx[0], new)
 	if os.system(readtree):
 	    raise YapError("Failed to switch")
         run_safely("git symbolic-ref HEAD refs/heads/%s" % branch)
