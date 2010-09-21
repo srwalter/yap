@@ -152,7 +152,7 @@ class SvnPlugin(YapCore):
 
         self.cmd_init()
         self._configure_repo(url)
-	os.system("git svn fetch -r %s:HEAD" % flags.get('-r', '1'))
+	os.system("git svn fetch --log-window=1000 -r %s:HEAD" % flags.get('-r', '1'))
 
 	self._cleanup_branches()
 	self._create_tagged_blob()
