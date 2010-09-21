@@ -1217,6 +1217,8 @@ To skip the problematic patch, run \"yap update skip\"."""
         remote, merge = self._get_tracking(current)
         merge = merge.replace('refs/heads/', '')
 
+        print "Fetching %s and updating to %s/%s" % (remote, remote, merge)
+
         self.cmd_fetch(remote)
         base = get_output("git merge-base HEAD refs/remotes/%s/%s" % (remote, merge))
 
